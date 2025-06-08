@@ -1,0 +1,860 @@
+{
+  "auth": {
+    "user_pool_id": "us-east-2_LxmO5WL9x",
+    "aws_region": "us-east-2",
+    "user_pool_client_id": "23rig3k9aprkh5r7dp71pr5bt0",
+    "identity_pool_id": "us-east-2:3bf2a60a-bfeb-41a5-8fea-14a12c059506",
+    "mfa_methods": [],
+    "standard_required_attributes": [
+      "email"
+    ],
+    "username_attributes": [
+      "email"
+    ],
+    "user_verification_types": [
+      "email"
+    ],
+    "groups": [
+      {
+        "Admin": {
+          "precedence": 0
+        }
+      },
+      {
+        "Rep": {
+          "precedence": 1
+        }
+      },
+      {
+        "Customer": {
+          "precedence": 2
+        }
+      }
+    ],
+    "mfa_configuration": "NONE",
+    "password_policy": {
+      "min_length": 8,
+      "require_lowercase": true,
+      "require_numbers": true,
+      "require_symbols": true,
+      "require_uppercase": true
+    },
+    "unauthenticated_identities_enabled": true
+  },
+  "data": {
+    "url": "https://amwp36scsven3af4ijqrckhtxy.appsync-api.us-east-2.amazonaws.com/graphql",
+    "aws_region": "us-east-2",
+    "api_key": "da2-dtsxbfl67be57iee3jak4humwi",
+    "default_authorization_type": "AMAZON_COGNITO_USER_POOLS",
+    "authorization_types": [
+      "API_KEY",
+      "AWS_IAM"
+    ],
+    "model_introspection": {
+      "version": 1,
+      "models": {
+        "User": {
+          "name": "User",
+          "fields": {
+            "userId": {
+              "name": "userId",
+              "isArray": false,
+              "type": "ID",
+              "isRequired": true,
+              "attributes": []
+            },
+            "groups": {
+              "name": "groups",
+              "isArray": true,
+              "type": "String",
+              "isRequired": false,
+              "attributes": [],
+              "isArrayNullable": false
+            },
+            "email": {
+              "name": "email",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true,
+              "attributes": []
+            },
+            "firstName": {
+              "name": "firstName",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "lastName": {
+              "name": "lastName",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "createdAt": {
+              "name": "createdAt",
+              "isArray": false,
+              "type": "AWSDateTime",
+              "isRequired": false,
+              "attributes": [],
+              "isReadOnly": true
+            },
+            "updatedAt": {
+              "name": "updatedAt",
+              "isArray": false,
+              "type": "AWSDateTime",
+              "isRequired": false,
+              "attributes": [],
+              "isReadOnly": true
+            }
+          },
+          "syncable": true,
+          "pluralName": "Users",
+          "attributes": [
+            {
+              "type": "model",
+              "properties": {}
+            },
+            {
+              "type": "key",
+              "properties": {
+                "fields": [
+                  "userId"
+                ]
+              }
+            },
+            {
+              "type": "auth",
+              "properties": {
+                "rules": [
+                  {
+                    "groupClaim": "cognito:groups",
+                    "provider": "userPools",
+                    "allow": "groups",
+                    "operations": [
+                      "read",
+                      "create",
+                      "update",
+                      "delete"
+                    ],
+                    "groups": [
+                      "Admin"
+                    ]
+                  },
+                  {
+                    "provider": "userPools",
+                    "ownerField": "userId",
+                    "allow": "owner",
+                    "identityClaim": "userId",
+                    "operations": [
+                      "create",
+                      "update",
+                      "delete",
+                      "read"
+                    ]
+                  },
+                  {
+                    "allow": "public",
+                    "provider": "apiKey",
+                    "operations": [
+                      "create",
+                      "update",
+                      "delete",
+                      "read"
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "primaryKeyInfo": {
+            "isCustomPrimaryKey": true,
+            "primaryKeyFieldName": "userId",
+            "sortKeyFieldNames": []
+          }
+        },
+        "Product": {
+          "name": "Product",
+          "fields": {
+            "product_id": {
+              "name": "product_id",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true,
+              "attributes": []
+            },
+            "main_sku": {
+              "name": "main_sku",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "title": {
+              "name": "title",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "description": {
+              "name": "description",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "main_image_url": {
+              "name": "main_image_url",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "main_pdf_link": {
+              "name": "main_pdf_link",
+              "isArray": false,
+              "type": {
+                "nonModel": "ProductMain_pdf_link"
+              },
+              "isRequired": false,
+              "attributes": []
+            },
+            "status": {
+              "name": "status",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "product_features": {
+              "name": "product_features",
+              "isArray": true,
+              "type": {
+                "model": "ProductFeature"
+              },
+              "isRequired": false,
+              "attributes": [],
+              "isArrayNullable": true,
+              "association": {
+                "connectionType": "HAS_MANY",
+                "associatedWith": [
+                  "product_id"
+                ]
+              }
+            },
+            "product_specs": {
+              "name": "product_specs",
+              "isArray": true,
+              "type": {
+                "model": "ProductSpec"
+              },
+              "isRequired": false,
+              "attributes": [],
+              "isArrayNullable": true,
+              "association": {
+                "connectionType": "HAS_MANY",
+                "associatedWith": [
+                  "product_id"
+                ]
+              }
+            },
+            "product_variants": {
+              "name": "product_variants",
+              "isArray": true,
+              "type": {
+                "model": "ProductVariant"
+              },
+              "isRequired": false,
+              "attributes": [],
+              "isArrayNullable": true,
+              "association": {
+                "connectionType": "HAS_MANY",
+                "associatedWith": [
+                  "product_id"
+                ]
+              }
+            },
+            "createdAt": {
+              "name": "createdAt",
+              "isArray": false,
+              "type": "AWSDateTime",
+              "isRequired": false,
+              "attributes": [],
+              "isReadOnly": true
+            },
+            "updatedAt": {
+              "name": "updatedAt",
+              "isArray": false,
+              "type": "AWSDateTime",
+              "isRequired": false,
+              "attributes": [],
+              "isReadOnly": true
+            }
+          },
+          "syncable": true,
+          "pluralName": "Products",
+          "attributes": [
+            {
+              "type": "model",
+              "properties": {}
+            },
+            {
+              "type": "key",
+              "properties": {
+                "fields": [
+                  "product_id"
+                ]
+              }
+            },
+            {
+              "type": "key",
+              "properties": {
+                "name": "productsByMain_sku",
+                "queryField": "listProductByMain_sku",
+                "fields": [
+                  "main_sku"
+                ]
+              }
+            },
+            {
+              "type": "auth",
+              "properties": {
+                "rules": [
+                  {
+                    "allow": "private",
+                    "operations": [
+                      "read",
+                      "create",
+                      "update",
+                      "delete"
+                    ]
+                  },
+                  {
+                    "allow": "public",
+                    "provider": "apiKey",
+                    "operations": [
+                      "create",
+                      "update",
+                      "delete",
+                      "read"
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "primaryKeyInfo": {
+            "isCustomPrimaryKey": true,
+            "primaryKeyFieldName": "product_id",
+            "sortKeyFieldNames": []
+          }
+        },
+        "ProductVariant": {
+          "name": "ProductVariant",
+          "fields": {
+            "variant_id": {
+              "name": "variant_id",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true,
+              "attributes": []
+            },
+            "title": {
+              "name": "title",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "sku": {
+              "name": "sku",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "pdfLink": {
+              "name": "pdfLink",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "product_id": {
+              "name": "product_id",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "product": {
+              "name": "product",
+              "isArray": false,
+              "type": {
+                "model": "Product"
+              },
+              "isRequired": false,
+              "attributes": [],
+              "association": {
+                "connectionType": "BELONGS_TO",
+                "targetNames": [
+                  "product_id"
+                ]
+              }
+            },
+            "createdAt": {
+              "name": "createdAt",
+              "isArray": false,
+              "type": "AWSDateTime",
+              "isRequired": false,
+              "attributes": [],
+              "isReadOnly": true
+            },
+            "updatedAt": {
+              "name": "updatedAt",
+              "isArray": false,
+              "type": "AWSDateTime",
+              "isRequired": false,
+              "attributes": [],
+              "isReadOnly": true
+            }
+          },
+          "syncable": true,
+          "pluralName": "ProductVariants",
+          "attributes": [
+            {
+              "type": "model",
+              "properties": {}
+            },
+            {
+              "type": "key",
+              "properties": {
+                "fields": [
+                  "variant_id"
+                ]
+              }
+            },
+            {
+              "type": "key",
+              "properties": {
+                "name": "productVariantsByProduct_id",
+                "queryField": "listProductVariantByProduct_id",
+                "fields": [
+                  "product_id"
+                ]
+              }
+            },
+            {
+              "type": "auth",
+              "properties": {
+                "rules": [
+                  {
+                    "allow": "private",
+                    "operations": [
+                      "read",
+                      "create",
+                      "update",
+                      "delete"
+                    ]
+                  },
+                  {
+                    "allow": "public",
+                    "provider": "apiKey",
+                    "operations": [
+                      "create",
+                      "update",
+                      "delete",
+                      "read"
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "primaryKeyInfo": {
+            "isCustomPrimaryKey": true,
+            "primaryKeyFieldName": "variant_id",
+            "sortKeyFieldNames": []
+          }
+        },
+        "ProductFeature": {
+          "name": "ProductFeature",
+          "fields": {
+            "id": {
+              "name": "id",
+              "isArray": false,
+              "type": "ID",
+              "isRequired": true,
+              "attributes": []
+            },
+            "title": {
+              "name": "title",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "image": {
+              "name": "image",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "product_id": {
+              "name": "product_id",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "product": {
+              "name": "product",
+              "isArray": false,
+              "type": {
+                "model": "Product"
+              },
+              "isRequired": false,
+              "attributes": [],
+              "association": {
+                "connectionType": "BELONGS_TO",
+                "targetNames": [
+                  "product_id"
+                ]
+              }
+            },
+            "createdAt": {
+              "name": "createdAt",
+              "isArray": false,
+              "type": "AWSDateTime",
+              "isRequired": false,
+              "attributes": [],
+              "isReadOnly": true
+            },
+            "updatedAt": {
+              "name": "updatedAt",
+              "isArray": false,
+              "type": "AWSDateTime",
+              "isRequired": false,
+              "attributes": [],
+              "isReadOnly": true
+            }
+          },
+          "syncable": true,
+          "pluralName": "ProductFeatures",
+          "attributes": [
+            {
+              "type": "model",
+              "properties": {}
+            },
+            {
+              "type": "key",
+              "properties": {
+                "name": "productFeaturesByProduct_id",
+                "queryField": "listProductFeatureByProduct_id",
+                "fields": [
+                  "product_id"
+                ]
+              }
+            },
+            {
+              "type": "auth",
+              "properties": {
+                "rules": [
+                  {
+                    "allow": "private",
+                    "operations": [
+                      "read",
+                      "create",
+                      "update",
+                      "delete"
+                    ]
+                  },
+                  {
+                    "allow": "public",
+                    "provider": "apiKey",
+                    "operations": [
+                      "create",
+                      "update",
+                      "delete",
+                      "read"
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "primaryKeyInfo": {
+            "isCustomPrimaryKey": false,
+            "primaryKeyFieldName": "id",
+            "sortKeyFieldNames": []
+          }
+        },
+        "ProductSpec": {
+          "name": "ProductSpec",
+          "fields": {
+            "id": {
+              "name": "id",
+              "isArray": false,
+              "type": "ID",
+              "isRequired": true,
+              "attributes": []
+            },
+            "key": {
+              "name": "key",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "value": {
+              "name": "value",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "product_id": {
+              "name": "product_id",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "product": {
+              "name": "product",
+              "isArray": false,
+              "type": {
+                "model": "Product"
+              },
+              "isRequired": false,
+              "attributes": [],
+              "association": {
+                "connectionType": "BELONGS_TO",
+                "targetNames": [
+                  "product_id"
+                ]
+              }
+            },
+            "createdAt": {
+              "name": "createdAt",
+              "isArray": false,
+              "type": "AWSDateTime",
+              "isRequired": false,
+              "attributes": [],
+              "isReadOnly": true
+            },
+            "updatedAt": {
+              "name": "updatedAt",
+              "isArray": false,
+              "type": "AWSDateTime",
+              "isRequired": false,
+              "attributes": [],
+              "isReadOnly": true
+            }
+          },
+          "syncable": true,
+          "pluralName": "ProductSpecs",
+          "attributes": [
+            {
+              "type": "model",
+              "properties": {}
+            },
+            {
+              "type": "key",
+              "properties": {
+                "name": "productSpecsByProduct_id",
+                "queryField": "listProductSpecByProduct_id",
+                "fields": [
+                  "product_id"
+                ]
+              }
+            },
+            {
+              "type": "auth",
+              "properties": {
+                "rules": [
+                  {
+                    "allow": "private",
+                    "operations": [
+                      "read",
+                      "create",
+                      "update",
+                      "delete"
+                    ]
+                  },
+                  {
+                    "allow": "public",
+                    "provider": "apiKey",
+                    "operations": [
+                      "create",
+                      "update",
+                      "delete",
+                      "read"
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "primaryKeyInfo": {
+            "isCustomPrimaryKey": false,
+            "primaryKeyFieldName": "id",
+            "sortKeyFieldNames": []
+          }
+        }
+      },
+      "enums": {},
+      "nonModels": {
+        "ProductMain_pdf_link": {
+          "name": "ProductMain_pdf_link",
+          "fields": {
+            "id": {
+              "name": "id",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "url": {
+              "name": "url",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            }
+          }
+        }
+      },
+      "queries": {
+        "GetAllProducts": {
+          "name": "GetAllProducts",
+          "isArray": false,
+          "type": "AWSJSON",
+          "isRequired": false
+        }
+      },
+      "mutations": {
+        "SaveProduct": {
+          "name": "SaveProduct",
+          "isArray": false,
+          "type": "AWSJSON",
+          "isRequired": false,
+          "arguments": {
+            "RawProduct": {
+              "name": "RawProduct",
+              "isArray": false,
+              "type": "AWSJSON",
+              "isRequired": true
+            }
+          }
+        },
+        "DeleteProductLambda": {
+          "name": "DeleteProductLambda",
+          "isArray": false,
+          "type": "AWSJSON",
+          "isRequired": false,
+          "arguments": {
+            "productId": {
+              "name": "productId",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true
+            }
+          }
+        },
+        "GeneratePDF": {
+          "name": "GeneratePDF",
+          "isArray": false,
+          "type": "AWSJSON",
+          "isRequired": false,
+          "arguments": {
+            "Product": {
+              "name": "Product",
+              "isArray": false,
+              "type": "AWSJSON",
+              "isRequired": true
+            }
+          }
+        },
+        "UploadPDF": {
+          "name": "UploadPDF",
+          "isArray": false,
+          "type": "AWSJSON",
+          "isRequired": false,
+          "arguments": {
+            "productId": {
+              "name": "productId",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true
+            },
+            "pdfUrl": {
+              "name": "pdfUrl",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true
+            }
+          }
+        }
+      }
+    }
+  },
+  "storage": {
+    "aws_region": "us-east-2",
+    "bucket_name": "amplify-guardiansvcapp-danielp-salesbucketfcc77375-txpfhhmfa3ur",
+    "buckets": [
+      {
+        "name": "sales",
+        "bucket_name": "amplify-guardiansvcapp-danielp-salesbucketfcc77375-txpfhhmfa3ur",
+        "aws_region": "us-east-2",
+        "paths": {
+          "pdfs/*": {
+            "authenticated": [
+              "get",
+              "list",
+              "write",
+              "delete"
+            ]
+          },
+          "public/*": {
+            "authenticated": [
+              "get",
+              "list",
+              "write",
+              "delete"
+            ]
+          },
+          "fonts/*": {
+            "authenticated": [
+              "get",
+              "list",
+              "write",
+              "delete"
+            ]
+          },
+          "assets/*": {
+            "authenticated": [
+              "get",
+              "list",
+              "write",
+              "delete"
+            ]
+          }
+        }
+      }
+    ]
+  },
+  "version": "1.4",
+  "custom": {
+    "API": {
+      "myRestApi": {
+        "endpoint": "https://0nl4jkrzb6.execute-api.us-east-2.amazonaws.com/dev/",
+        "region": "us-east-2",
+        "apiName": "myRestApi"
+      }
+    }
+  }
+}

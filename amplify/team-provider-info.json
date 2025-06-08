@@ -1,0 +1,15 @@
+{
+  "dev": {
+    "awscloudformation": {
+      "AuthRoleName": "amplify-guardianskywatchers-dev-2f3c5-authRole",
+      "UnauthRoleArn": "arn:aws:iam::499741725508:role/amplify-guardianskywatchers-dev-2f3c5-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::499741725508:role/amplify-guardianskywatchers-dev-2f3c5-authRole",
+      "Region": "us-east-1",
+      "DeploymentBucketName": "amplify-guardianskywatchers-dev-2f3c5-deployment",
+      "UnauthRoleName": "amplify-guardianskywatchers-dev-2f3c5-unauthRole",
+      "StackName": "amplify-guardianskywatchers-dev-2f3c5",
+      "StackId": "arn:aws:cloudformation:us-east-1:499741725508:stack/amplify-guardianskywatchers-dev-2f3c5/0991aeb0-b1a4-11ef-8b8b-0ea03abc55ff",
+      "AmplifyAppId": "d1ws0xiuktd3q6"
+    }
+  }
+}
