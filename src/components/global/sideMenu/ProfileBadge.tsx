@@ -53,14 +53,14 @@ const ProfileBadge = ({ isCollapsed }: ProfileBadgeProps) => {
   };
 
   return (
-    <div className="flex flex-col-reverse items-center text-[var(--primary)]">
+    <div className="flex flex-col-reverse items-center text-[var(--color-text-primary)]">
       {!isCollapsed ? (
         <Accordion type="single" collapsible className="w-full">
           <AccordionItem value="profile" className="border-none">
             <AccordionContent className="w-full flex flex-col gap-2">
               <Button
                 variant="ghost"
-                className="justify-start w-full text-[var(--primary)] hover:bg-[var(--sidebar-link-hover)] cursor-pointer py-2"
+                className="justify-start w-full text-[var(--color-text-primary)] hover:bg-[var(--sidebar-link-hover)] cursor-pointer py-2"
                 onClick={() => navigate("/profile")}
               >
                 Profile
@@ -70,16 +70,16 @@ const ProfileBadge = ({ isCollapsed }: ProfileBadgeProps) => {
                 className="justify-start w-full text-[var(--primary)] hover:bg-[var(--sidebar-link-hover)] cursor-pointer py-2"
                 onClick={() =>
                   window.open(
-                    "https://main.d1hf59qn1zcqrt.amplifyapp.com/",
+                    "https://straydogstrength.com/",
                     "_blank",
                   )
                 }
               >
-                Help & Docs
+                straydogstrength.com
               </Button>
               <Button
                 variant="ghost"
-                className="justify-start w-full text-red-600 hover:bg-[var(--sidebar-link-hover)] hover:text-red-600 cursor-pointer py-2"
+                className="justify-start w-full text-[var(--color-text-primary)] hover:bg-[var(--sidebar-link-hover)] hover:text-[var(--color-text-primary)] cursor-pointer py-2"
                 onClick={handleLogout}
               >
                 <IoIosLogOut className="mr-2 h-4 w-4" />

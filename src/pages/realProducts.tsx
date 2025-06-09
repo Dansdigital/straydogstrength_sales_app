@@ -356,7 +356,7 @@ export function RealProducts() {
     return (
         <div className="p-4">
             <div className="mt-4 mb-4 flex justify-between items-center">
-                <h1 className="text-2xl font-bold">Products</h1>
+                <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">Products</h1>
                 <div className="flex items-center gap-4">
                     <span className="text-sm text-gray-500">
                         {selectedProducts.size} selected
@@ -364,7 +364,7 @@ export function RealProducts() {
                     <Button
                         onClick={handleProcessSelected}
                         disabled={selectedProducts.size === 0}
-                        className={`bg-[#cc2026] text-white hover:bg-[#a51920] ${selectedProducts.size === 0 ? 'cursor-not-allowed' : ''}`}
+                        className={`bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)] ${selectedProducts.size === 0 ? 'cursor-not-allowed' : ''}`}
                     >
                         Process Selected
                     </Button>
@@ -376,33 +376,33 @@ export function RealProducts() {
                     placeholder="Search products..."
                     value={searchTerm}
                     onChange={(e) => handleSearch(e.target.value)}
-                    className="w-full"
+                    className="w-1/4 text-[var(--color-text-primary)]"
                 />
             </div>
             <div className="max-h-[calc(100vh-200px)] overflow-y-auto">
                 <Table>
                     <TableHeader className="sticky top-0 bg-black z-10">
-                        <TableRow>
+                        <TableRow className="text-[var(--color-text-primary)] border border-[var(--color-border)]">
                             <TableHead className="w-[50px]">
                                 <Checkbox
                                     checked={selectedProducts.size === filteredProducts.length && filteredProducts.length > 0}
                                     onCheckedChange={toggleAllSelection}
                                 />
                             </TableHead>
-                            <TableHead>Image</TableHead>
-                            <TableHead>SKU</TableHead>
-                            <TableHead>Title</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Features</TableHead>
-                            <TableHead>Specs</TableHead>
-                            <TableHead>Actions</TableHead>
+                            <TableHead className="text-[var(--color-text-primary)]">Image</TableHead>
+                            <TableHead className="text-[var(--color-text-primary)]">SKU</TableHead>
+                            <TableHead className="text-[var(--color-text-primary)]">Title</TableHead>
+                            <TableHead className="text-[var(--color-text-primary)]">Status</TableHead>
+                            <TableHead className="text-[var(--color-text-primary)]">Features</TableHead>
+                            <TableHead className="text-[var(--color-text-primary)]">Specs</TableHead>
+                            <TableHead className="text-[var(--color-text-primary)]">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
-                    <TableBody>
+                    <TableBody className="text-[var(--color-text-primary)]">
                         {currentItems.map((product) => (
                             <TableRow
                                 key={product.product_id}
-                                className={`hover:bg-blue-50/20 transition-colors duration-200 cursor-pointer ${selectedProducts.has(product.product_id) ? 'bg-blue-50/20' : ''
+                                className={`hover:bg-[var(--color-bg-primary-hover)] transition-colors duration-200 cursor-pointer ${selectedProducts.has(product.product_id) ? 'bg-[var(--color-bg-primary-hover)]' : ''
                                     }`}
                                 onClick={() => toggleProductSelection(product.product_id)}
                             >

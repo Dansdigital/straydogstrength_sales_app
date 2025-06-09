@@ -39,7 +39,7 @@ const Root = () => (
           }
         />
         <Route
-          path="/"
+          path="products"
           element={
             <AuthGuard>
               <RealProducts />

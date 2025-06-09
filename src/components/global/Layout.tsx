@@ -85,12 +85,11 @@ export default function Layout() {
             <CgMenuGridO />
           </button>
         </div>
-
         {/* Sidebar */}
         <div
           className={`${!isSidebarOpen ? "w-screen lg:w-auto lg:block" : "hidden lg:block"} relative bg-[var(--color-bg-primary)]`}
         >
-          <MainSidebar isCollapsed={!isSidebarOpen} onExpand={() => setIsSidebarOpen(true)} onContract={() => setIsSidebarOpen(false)} />
+          <MainSidebar />
         </div>
 
         {/* Main content */}
@@ -98,7 +97,7 @@ export default function Layout() {
           className={`${!isSidebarOpen ? "hidden lg:block" : "block"} flex-1 flex flex-col overflow-hidden bg-[var(--color-bg-primary)]`}
         >
           {/* Outlet content */}
-          <main className="flex-1 overflow-auto">
+          <main className="flex-1 overflow-auto bg-[var(--color-bg-primary)]">
             <Outlet />
           </main>
         </div>

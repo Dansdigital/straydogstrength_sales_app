@@ -6,8 +6,6 @@ interface SidebarLinkProps {
   link: string;
   icon: IconType;
   reload?: boolean;
-  isCollapsed?: boolean;
-  onContract?: () => void;
 }
 
 const SidebarLink: React.FC<SidebarLinkProps> = ({
@@ -15,8 +13,6 @@ const SidebarLink: React.FC<SidebarLinkProps> = ({
   link,
   icon: Icon,
   reload = false,
-  isCollapsed = false,
-  onContract,
 }: SidebarLinkProps) => {
   const location = useLocation();
   const isActive = location.pathname === link;
@@ -26,17 +22,12 @@ const SidebarLink: React.FC<SidebarLinkProps> = ({
       <Link
         to={link}
         reloadDocument={reload}
-        onClick={onContract}
-        className={`flex items-center text-base rounded-lg ${
-          isCollapsed ? "px-2" : "px-4"
-        } py-2 text-[var(--primary)] hover:bg-[var(--hover)] cursor-pointer ${
-          isActive ? "text-[var(--primary-active)]" : ""
-        }`}
+        className={`flex items-center text-[var(--color-text-primary)] rounded-lg px-4 py-2 cursor-pointer ${isActive ? "text-[var(--color-text-primary)]" : ""}`}
       >
         <Icon
           className={`w-6 h-6 ${isActive ? "opacity-100" : "opacity-75"}`}
         />
-        {!isCollapsed && <span className="font-medium ml-2">{title}</span>}
+        <span className="font-medium ml-2 text-[var(--color-text-primary)]">{title}</span>
       </Link>
     </li>
   );

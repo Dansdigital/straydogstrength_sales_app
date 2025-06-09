@@ -147,7 +147,7 @@ const SidebarProvider = React.forwardRef<
               } as React.CSSProperties
             }
             className={cn(
-              "group/sidebar-wrapper flex min-h-svh w-full has-[[data-variant=inset]]:bg-sidebar",
+              "group/sidebar-wrapper flex min-h-svh w-full has-[[data-variant=inset]]:bg-[var(--sidebar-background)]",
               className
             )}
             ref={ref}
@@ -771,8 +771,8 @@ const SidebarLink = React.forwardRef<
       to={link}
       ref={ref}
       className={cn(
-        "flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors",
-        isActive ? "bg-primary text-primary-foreground" : "hover:bg-accent",
+        "flex items-center gap-2 rounded-lg px-3 py-2 text-[var(--color-text-primary)] hover:text-[var(--color-text-primary)] transition-colors",
+        isActive ? "text-[var(--color-text-primary)]" : "hover:bg-[var(--color-bg-primary-hover)]",
         className
       )}
       onClick={() => {
