@@ -37,7 +37,7 @@ const apiStack = backend.createStack("api-stack");
 
 // create a new REST API
 const myRestApi = new RestApi(apiStack, "RestApi", {
-  restApiName: "myRestApi",
+  restApiName: "StrayDogStrengthSalesApp",
   deploy: true,
   deployOptions: {
     stageName: "dev",
