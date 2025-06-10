@@ -148,7 +148,7 @@ export default function LoginForm() {
             <button
               type="submit"
               disabled={changePasswordLoading}
-              className="w-full p-3 rounded bg-[var(--color-primary)] text-white font-medium hover:bg-[var(--color-primary-hover)] transition-colors disabled:bg-[var(--color-primary-hover)] disabled:cursor-not-allowed"
+              className="w-full p-3 bg-[var(--color-primary)] text-white font-medium hover:bg-[var(--color-primary-hover)] transition-colors disabled:bg-[var(--color-primary-hover)] disabled:cursor-not-allowed"
             >
               {changePasswordLoading ? (
                 <div className="flex items-center justify-center">

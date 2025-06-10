@@ -38,7 +38,6 @@ export function TableActions({
           className="bg-[var(--color-bg-primary)] text-[var(--color-text-primary)]"
         >
           <DropdownMenuItem
-            className="hover:bg-[var(--color-bg-primary-hover)]"
             onClick={() => onEdit(user)}
           >
             Edit User

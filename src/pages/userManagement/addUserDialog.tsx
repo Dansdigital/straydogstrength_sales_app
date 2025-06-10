@@ -51,6 +51,13 @@ const AddUser = ({
   const groupList = ["Admin", "Rep", "Customer"];
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    setFormData(prev => ({
+      ...prev,
+      groups: selectedGroups
+    }));
+  }, [selectedGroups]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -80,6 +87,7 @@ const AddUser = ({
       }
 
       // Validate email format
+      console.log("formdata: ", formData);
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
         throw new Error("Please enter a valid email address");
       }
@@ -104,11 +112,6 @@ const AddUser = ({
       if (selectedGroups.length === 0) {
         throw new Error("Please select at least one group");
       }
-
-      setFormData((prev) => ({
-        ...prev,
-        groups: selectedGroups,
-      }));
 
       const createUserResponse = await client.mutations.createNewUser({
         email: formData.email,
@@ -282,7 +285,7 @@ const AddUser = ({
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" variant="submit" disabled={loading}>
               {loading ? <LoadingSpinner /> : "Create User"}
             </Button>
           </DialogFooter>

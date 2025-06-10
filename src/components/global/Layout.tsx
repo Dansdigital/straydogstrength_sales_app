@@ -1,16 +1,25 @@
 import { useEffect, useState, useRef } from "react";
-import { getCurrentUser, AuthUser, signOut } from "aws-amplify/auth";
+import { signOut } from "aws-amplify/auth";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { CheckTheme } from "../Theme/ThemeChanger";
-import { NavLink } from "react-router-dom";
+import { fetchCurrentUser } from "../../utils/fetchCurrentUser";
+
+type User = {
+  username: string;
+  userId: string;
+  signInDetails: {
+    loginId: string;
+  };
+  groups: string[];
+};
 
 export default function Layout() {
   CheckTheme();
 
   const location = useLocation();
   const navigate = useNavigate();
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+  const [user, setUser] = useState<User | null>(null);
+  // const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
 
   const isAuthRoute = [
     "/login",
@@ -24,14 +33,9 @@ export default function Layout() {
 
     async function checkUser() {
       try {
-        const currentUser = await getCurrentUser();
-        if (mounted) {
-          console.log('Current User Session:', {
-            username: currentUser.username,
-            userId: currentUser.userId,
-            signInDetails: currentUser.signInDetails,
-            groups: currentUser.signInDetails?.loginId?.split('@')[0] === 'admin' ? ['Admin'] : ['Customer']
-          });
+        const currentUser = await fetchCurrentUser();
+
+        if (mounted && currentUser) {
           setUser(currentUser);
         }
       } catch (error) {
@@ -51,13 +55,13 @@ export default function Layout() {
 
   const componentRef = useRef(null);
   useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 1024);
-    };
+    // const handleResize = () => {
+    //   setIsMobile(window.innerWidth < 1024);
+    // };
 
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    // handleResize();
+    // window.addEventListener("resize", handleResize);
+    // return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   const handleSignOut = async () => {
@@ -91,7 +95,7 @@ export default function Layout() {
             {/* Navigation Menu */}
             <nav className="flex items-center gap-8">
               <NavLink to="/products" label="Products" />
-              {user?.signInDetails?.loginId?.split('@')[0] === 'admin' && (
+              {user?.groups.includes('Admin') && (
                 <NavLink to="/user-management" label="User Management" />
               )}
             </nav>

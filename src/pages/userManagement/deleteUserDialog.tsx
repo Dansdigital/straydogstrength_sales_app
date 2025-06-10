@@ -56,14 +56,7 @@ export default function DeleteUserDialog({
         </DialogHeader>
         <DialogFooter>
           <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isDeleting}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="destructive"
+            variant="submit"
             onClick={handleDelete}
             disabled={isDeleting}
           >

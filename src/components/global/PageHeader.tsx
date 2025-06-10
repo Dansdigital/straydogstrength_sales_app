@@ -6,9 +6,9 @@ interface PageHeaderProps {
 const PageHeader: React.FC<PageHeaderProps> = ({ title, description }) => (
   <div>
     <div className="flex justify-between items-center mb-4">
-      <h1 className="text-2xl font-bold">{title}</h1>
+      <h1 className="text-4xl">{title}</h1>
     </div>
-    <p className="text-gray-600 mb-6">{description}</p>
+    <p className="text-[var(--primary-text)] mb-6">{description}</p>
   </div>
 );
 

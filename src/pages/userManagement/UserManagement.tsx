@@ -19,7 +19,7 @@ import {
   TableRow,
 } from "../../components/ui/table";
 import LoadingMessage from "../../components/global/LoadingMessage";
-import EditUserDialog from "./updateUserDialog";
+import EditUserDialog from "./editUserDialog";
 import { createColumns } from "./tableComponents/tableColumns";
 import { TableHeader as TableHeaderComponent } from "./tableComponents/tableHeader";
 import { TablePagination } from "./tableComponents/tablePagination";
@@ -27,7 +27,7 @@ import AddUser from "./addUserDialog";
 import { generateClient } from "aws-amplify/api";
 import type { Schema } from "../../../amplify/data/resource";
 import { GraphQLResult } from "@aws-amplify/api-graphql";
-import { getCurrentUser } from "aws-amplify/auth";
+import { fetchCurrentUser } from "../../utils/fetchCurrentUser";
 
 const client = generateClient<Schema>();
 
@@ -80,17 +80,17 @@ export default function UserManagement() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
-  const [currentUserGroups, setCurrentUserGroups] = useState<string[] | null>(null);
+  const [currentUser, setCurrentUser] = useState<string[] | null>(null);
 
   const fetchCurrentUserGroups = async () => {
     try {
-      const currentUser = await getCurrentUser();
-      console.log("currentUser: ", currentUser);
-      const groups = currentUser.signInDetails?.loginId?.split('@')[0] === 'admin' ? ['Admin'] : ['Customer'];
-      setCurrentUserGroups(groups);
+      const currentUser = await fetchCurrentUser();
+      const groups = currentUser?.groups;
+      setCurrentUser(groups);
+
     } catch (error) {
       console.error('Error fetching user groups:', error);
-      setCurrentUserGroups([]);
+      setCurrentUser([]);
     }
   };
 
@@ -107,6 +107,7 @@ export default function UserManagement() {
   }, [refreshUsers]);
 
   const handleEditUser = (user: User) => {
+    console.log("user: ", user);
     setSelectedUser(user);
     setIsEditDialogOpen(true);
   };
@@ -143,7 +144,7 @@ export default function UserManagement() {
         <TableHeaderComponent
           table={table}
           onAddUser={() => setIsAddUserOpen(true)}
-          currentUserGroups={currentUserGroups || []}
+          currentUserGroups={currentUser || []}
         />
         <div className="rounded-md border">
           <Table>
@@ -201,7 +202,12 @@ export default function UserManagement() {
           <EditUserDialog
             user={selectedUser}
             open={isEditDialogOpen}
-            onOpenChange={setIsEditDialogOpen}
+            onOpenChange={(open) => {
+              setIsEditDialogOpen(open);
+              if (!open) {
+                setSelectedUser(null);
+              }
+            }}
             onUserUpdated={handleUserUpdated}
           />
         )}

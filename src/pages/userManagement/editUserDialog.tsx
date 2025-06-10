@@ -34,11 +34,17 @@ export default function EditUserDialog({
 }: EditUserDialogProps) {
   const [error, setError] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  console.log("EditUserDialog - User data:", user);
+  console.log("EditUserDialog - User groups:", user.groups);
+
   const [formData, setFormData] = useState({
     firstName: user.firstName,
     lastName: user.lastName,
     groups: user.groups || [],
   });
+
+  console.log("EditUserDialog - Initial formData:", formData);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -136,25 +142,17 @@ export default function EditUserDialog({
                 <div key={group} className="flex items-center space-x-2">
                   <Checkbox
                     id={group}
-                    className="data-[state=checked]:border-[var(--primary-active)] data-[state=checked]:bg-[var(--primary-active)] data-[state=checked]:text-[var(--button-text)]"
+                    className="data-[state=checked]:border-red-500 data-[state=checked]:bg-red-500 data-[state=checked]:text-white border-2"
                     checked={formData.groups.includes(group)}
                     onCheckedChange={() => handleGroupChange(group)}
                   />
-                  <Label htmlFor={group}>{group}</Label>
+                  <Label htmlFor={group} className={formData.groups.includes(group) ? "text-red-500 font-medium" : ""}>{group}</Label>
                 </div>
               ))}
             </div>
           </div>
 
           <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
             <Button
               type="submit"
               variant="submit"
