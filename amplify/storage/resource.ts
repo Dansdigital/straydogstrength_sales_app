@@ -1,7 +1,7 @@
 import { defineStorage } from '@aws-amplify/backend';
 
 export const storage = defineStorage({
-  name: 'sales',
+  name: 'salesApp',
   access: (allow) => ({
     'pdfs/*': [
       allow.authenticated.to(['read', 'write', 'delete'])

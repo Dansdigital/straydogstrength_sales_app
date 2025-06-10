@@ -229,7 +229,6 @@ export async function getProductData(RawProduct: RawProductInput, SHOPIFY_ACCESS
                 id: "",
                 url: "",
             },
-            raw_data: RawProduct
         };
 
         try {

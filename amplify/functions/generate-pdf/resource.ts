@@ -4,4 +4,5 @@ export const GeneratePDF = defineFunction({
   name: "generate-pdf",
   timeoutSeconds: 900,
   entry: "./handler.ts",
+  resourceGroupName: 'storage',
 });

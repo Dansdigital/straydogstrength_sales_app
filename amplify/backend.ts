@@ -12,6 +12,10 @@ import { data } from "./data/resource";
 import { storage } from './storage/resource';
 import { webhookProcess } from "./functions/webhookProcess/resource";
 import { GeneratePDF } from "./functions/generate-pdf/resource";
+import { createUser } from "./functions/user-management/create-user/resource";
+import { updateUser } from "./functions/user-management/update-user/resource";
+import { deleteUser } from "./functions/user-management/delete-user/resource";
+import * as iam from "aws-cdk-lib/aws-iam";
 
 const backend = defineBackend({
   auth,
@@ -19,6 +23,9 @@ const backend = defineBackend({
   storage,
   webhookProcess,
   GeneratePDF,
+  createUser,
+  updateUser,
+  deleteUser,
 });
 
 const apiStack = backend.createStack("api-stack");
@@ -92,3 +99,22 @@ const s3Policy = new PolicyStatement({
 });
 
 backend.GeneratePDF.resources.lambda.addToRolePolicy(s3Policy);
+
+backend.createUser.resources.lambda.role?.addToPrincipalPolicy(
+  new iam.PolicyStatement({
+    sid: "AdminAddUserToGroup",
+    actions: ["cognito-idp:AdminAddUserToGroup"],
+    resources: ["*"],
+  }),
+);
+
+backend.updateUser.resources.lambda.role?.addToPrincipalPolicy(
+  new iam.PolicyStatement({
+    sid: "AdminAddUserToGroup",
+    actions: [
+      "cognito-idp:AdminAddUserToGroup",
+      "cognito-idp:AdminRemoveUserFromGroup",
+    ],
+    resources: ["*"],
+  }),
+);

@@ -17,7 +17,7 @@ import {
 
 const client = generateClient<Schema>();
 
-const AVAILABLE_GROUPS = ["ADMINS", "MANAGERS", "VIEWERS"];
+const AVAILABLE_GROUPS = ["Admin", "Rep", "Customer"];
 
 interface EditUserDialogProps {
   user: User;
@@ -63,16 +63,11 @@ export default function EditUserDialog({
     setError("");
 
     try {
-      await client.graphql({
-        query: `mutation UpdateUser($userId: String!, $firstName: String!, $lastName: String!, $newGroups: [String!]!) {
-                    updateAUser(userId: $userId, firstName: $firstName, lastName: $lastName, newGroups: $newGroups)
-                }`,
-        variables: {
-          userId: user.userId,
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          newGroups: formData.groups,
-        },
+      await client.mutations.updateAUser({
+        userId: user.userId,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        newGroups: formData.groups,
       });
 
       onUserUpdated();
@@ -87,7 +82,7 @@ export default function EditUserDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px] bg-[var(--higher-background)] text-[var(--primary)]">
+      <DialogContent className="sm:max-w-[425px] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)]">
         <DialogHeader>
           <DialogTitle>Edit User</DialogTitle>
           <DialogDescription>
@@ -162,8 +157,8 @@ export default function EditUserDialog({
             </Button>
             <Button
               type="submit"
+              variant="submit"
               disabled={isSubmitting}
-              className="bg-[var(--button)] text-[var(--button-text)] hover:bg-[var(--button-hover)]"
             >
               {isSubmitting ? "Saving..." : "Save Changes"}
             </Button>

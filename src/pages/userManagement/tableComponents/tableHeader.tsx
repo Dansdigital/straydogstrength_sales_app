@@ -32,7 +32,7 @@ export function TableHeader({
           onClick={onAddUser}
           variant="outline"
           size="sm"
-          disabled={!currentUserGroups.includes("ADMINS")}
+          // disabled={!currentUserGroups.includes("Admin")}
           className="ml-2 border bg-[var(--primary-active)] hover:bg-[var(--primary-active)] text-[var(--primary-text)]"
         >
           <Plus className="h-4 w-4" />

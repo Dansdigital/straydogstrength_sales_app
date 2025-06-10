@@ -35,10 +35,10 @@ export function TableActions({
         </DropdownMenuTrigger>
         <DropdownMenuContent
           align="end"
-          className="bg-[var(--background)] border-[var(--border-color)]"
+          className="bg-[var(--color-bg-primary)] text-[var(--color-text-primary)]"
         >
           <DropdownMenuItem
-            className="hover:bg-[var(--higher-background)]"
+            className="hover:bg-[var(--color-bg-primary-hover)]"
             onClick={() => onEdit(user)}
           >
             Edit User

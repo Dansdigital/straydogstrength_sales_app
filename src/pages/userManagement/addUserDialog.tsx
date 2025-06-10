@@ -48,7 +48,7 @@ const AddUser = ({
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string>("");
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
-  const groupList = ["ADMINS", "MANAGERS", "VIEWERS"];
+  const groupList = ["Admin", "Rep", "Customer"];
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -110,15 +110,12 @@ const AddUser = ({
         groups: selectedGroups,
       }));
 
-      console.log("Form data before submission:", formData);
-
-      const createUserResponse = await client.graphql<{
-        createNewUser: string;
-      }>({
-        query: `mutation CreateNewUser($email: String!, $firstName: String!, $lastName: String!, $tempPassword: String!, $groups: [String!]!) {
-          createNewUser(email: $email, firstName: $firstName, lastName: $lastName, tempPassword: $tempPassword, groups: $groups)
-        }`,
-        variables: formData,
+      const createUserResponse = await client.mutations.createNewUser({
+        email: formData.email,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        tempPassword: formData.tempPassword,
+        groups: formData.groups,
       });
 
       console.log("Create user response:", createUserResponse);
@@ -157,7 +154,7 @@ const AddUser = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[var(--higher-background)] text-[var(--primary)] sm:max-w-[425px]">
+      <DialogContent className="bg-[var(--color-bg-primary)] text-[var(--primary)] sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Add New User</DialogTitle>
           <DialogDescription>

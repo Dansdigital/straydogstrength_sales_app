@@ -23,7 +23,7 @@ const Root = () => (
     <Routes>
       <Route element={<Layout />}>
         {/* Public Routes */}
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/" element={<Navigate to="/products" replace />} />
         <Route path="login" element={<Login />} />
         <Route path="signup" element={<SignUp />} />
         <Route path="confirm-signup" element={<ConfirmSignUp />} />
@@ -63,7 +63,11 @@ const Root = () => (
           }
         />
         {/* 404 Route */}
-        <Route path="*" element={<NotFound />} />
+        <Route path="*" element={
+          <AuthGuard>
+            <NotFound />
+          </AuthGuard>
+        } />
       </Route>
     </Routes>
   </BrowserRouter>

@@ -7,17 +7,10 @@ import { env } from "$amplify/env/webhook-process";
 import { Amplify } from 'aws-amplify';
 import { generateClient } from "aws-amplify/data";
 import { type Schema } from "../../data/resource";
+import { type ProductData } from '../services';
 
 const SHOPIFY_ACCESS_TOKEN = env.SHOPIFY_ACCESS_TOKEN;
 export const client = generateClient<Schema>();
-
-// Add this interface at the top of the file
-interface ProductResponse {
-  data: {
-    product_id: string;
-    // Add other fields as needed
-  };
-}
 
 // Initialize Lambda client
 const lambdaClient = new LambdaClient({
@@ -49,6 +42,49 @@ async function callGeneratePDFs(productData: any) {
   }
 }
 
+async function createProduct(productData: ProductData) {
+  try {
+    const product = await client.models.Product.create({
+      product_id: productData.product_id,
+      main_sku: productData.sku,
+      title: productData.title,
+      description: productData.description,
+      main_image_url: productData.main_image_url,
+      main_pdf_link: {
+        id: productData.pdf.id,
+        url: productData.pdf.url,
+      },
+      status: productData.status,
+    });
+    for (const variant of productData.variants) {
+      await client.models.ProductVariant.create({
+        product_id: productData.product_id,
+        variant_id: variant.id,
+        sku: variant.sku,
+        title: variant.title,
+        pdfLink: variant.pdfLink,
+      });
+    }
+    for (const feature of productData.features || []) {
+      await client.models.ProductFeature.create({
+        product_id: productData.product_id,
+        title: feature.title,
+        image: feature.imageSrc,
+      });
+    }
+    for (const spec of productData.product_specs || []) {
+      await client.models.ProductSpec.create({
+        product_id: productData.product_id,
+        key: spec.key,
+        value: spec.value,
+      });
+    }
+    return product;
+  } catch (error) {
+    console.error('Error creating product:', error);
+  }
+}
+
 export const handler: APIGatewayProxyHandler = async (event) => {
   const { resourceConfig, libraryOptions } =
     await getAmplifyDataClientConfig(env);
@@ -68,7 +104,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
 
     webhookData = JSON.parse(event.body);
 
-    const productData = await getProductData(webhookData, SHOPIFY_ACCESS_TOKEN);
+    const productData: ProductData = await getProductData(webhookData, SHOPIFY_ACCESS_TOKEN);
     console.log("Product data:\n", productData);
 
     if (event.headers['X-Shopify-Topic'] === 'products/update') {
@@ -85,10 +121,8 @@ export const handler: APIGatewayProxyHandler = async (event) => {
         console.log("Deleted product record:", deleteProduct);
 
         // create product record
-        const createProduct = await client.mutations.SaveProduct({
-          RawProduct: productData
-        });
-        console.log("Created product record:", createProduct);
+        const product = await createProduct(productData);
+        console.log("Created product record:", product);
       } else {
         console.log("Product data has not changed");
       }

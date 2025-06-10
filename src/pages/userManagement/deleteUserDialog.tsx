@@ -32,13 +32,8 @@ export default function DeleteUserDialog({
   const handleDelete = async () => {
     try {
       setIsDeleting(true);
-      await client.graphql({
-        query: `mutation DeleteAUser($userId: String!) {
-          deleteAUser(userId: $userId)
-        }`,
-        variables: {
-          userId: user.userId,
-        },
+      await client.mutations.deleteAUser({
+        userId: user.userId,
       });
       onOpenChange(false);
       onUserDeleted();
@@ -51,7 +46,7 @@ export default function DeleteUserDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[var(--background)] border-[var(--border-color)]">
+      <DialogContent className="bg-[var(--color-bg-primary)] text-[var(--color-text-primary)]">
         <DialogHeader>
           <DialogTitle>Delete User</DialogTitle>
           <DialogDescription>

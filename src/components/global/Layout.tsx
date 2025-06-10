@@ -1,9 +1,8 @@
 import { useEffect, useState, useRef } from "react";
-import { getCurrentUser, AuthUser } from "aws-amplify/auth";
+import { getCurrentUser, AuthUser, signOut } from "aws-amplify/auth";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { CheckTheme } from "../Theme/ThemeChanger";
-import { CgMenuGridO } from "react-icons/cg";
-import MainSidebar from "../global/sideMenu/SideMenu";
+import { NavLink } from "react-router-dom";
 
 export default function Layout() {
   CheckTheme();
@@ -11,7 +10,6 @@ export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
 
   const isAuthRoute = [
@@ -21,17 +19,6 @@ export default function Layout() {
     "/forgot-password",
   ].includes(location.pathname);
 
-  // Add effect to handle sidebar state based on route
-  useEffect(() => {
-    if (isMobile) {
-      // On mobile, keep the sidebar closed by default
-      setIsSidebarOpen(false);
-    } else {
-      // On desktop, collapse only on search page, expand on other pages
-      setIsSidebarOpen(location.pathname !== "/search");
-    }
-  }, [location.pathname, isMobile]);
-
   useEffect(() => {
     let mounted = true;
 
@@ -39,6 +26,12 @@ export default function Layout() {
       try {
         const currentUser = await getCurrentUser();
         if (mounted) {
+          console.log('Current User Session:', {
+            username: currentUser.username,
+            userId: currentUser.userId,
+            signInDetails: currentUser.signInDetails,
+            groups: currentUser.signInDetails?.loginId?.split('@')[0] === 'admin' ? ['Admin'] : ['Customer']
+          });
           setUser(currentUser);
         }
       } catch (error) {
@@ -67,40 +60,78 @@ export default function Layout() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      navigate("/login");
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
+  };
+
   if (isAuthRoute) {
     return <Outlet />;
   }
 
   function LayoutDisplay() {
     return (
-      <div className="h-screen flex">
-        <div
-          className={`h-full m-2 text-2xl text-center ${isSidebarOpen ? "hidden" : "lg:hidden"}`}
-        >
-          <button
-            onClick={() => {
-              setIsSidebarOpen(!isSidebarOpen);
-            }}
-          >
-            <CgMenuGridO />
-          </button>
-        </div>
-        {/* Sidebar */}
-        <div
-          className={`${!isSidebarOpen ? "w-screen lg:w-auto lg:block" : "hidden lg:block"} relative bg-[var(--color-bg-primary)]`}
-        >
-          <MainSidebar />
-        </div>
+      <div className="h-screen flex flex-col">
+        {/* Header */}
+        <header className="bg-[var(--color-bg-primary)] border-b border-[var(--color-border)] p-4">
+          <div className="max-w-7xl mx-auto flex items-center justify-between">
+            {/* Logo */}
+            <div className="flex items-center gap-2">
+              <img
+                src="/SD_red_header_LOGO.png"
+                alt="Stray Dog Strength Logo"
+                className="w-[300px]"
+              />
+            </div>
+
+            {/* Navigation Menu */}
+            <nav className="flex items-center gap-8">
+              <NavLink to="/products" label="Products" />
+              {user?.signInDetails?.loginId?.split('@')[0] === 'admin' && (
+                <NavLink to="/user-management" label="User Management" />
+              )}
+            </nav>
+
+            {/* Sign Out Button */}
+            <div className="flex items-center gap-4">
+              <button
+                onClick={handleSignOut}
+                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md transition-colors"
+              >
+                Sign out
+              </button>
+            </div>
+          </div>
+        </header>
 
         {/* Main content */}
-        <div
-          className={`${!isSidebarOpen ? "hidden lg:block" : "block"} flex-1 flex flex-col overflow-hidden bg-[var(--color-bg-primary)]`}
-        >
-          {/* Outlet content */}
-          <main className="flex-1 overflow-auto bg-[var(--color-bg-primary)]">
+        <main className="flex-1 overflow-auto bg-[var(--color-bg-primary)] p-4">
+          <div className="max-w-7xl mx-auto">
             <Outlet />
-          </main>
-        </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // Navigation Link Component
+  function NavLink({ to, label }: { to: string; label: string }) {
+    const isActive = location.pathname === to;
+
+    return (
+      <div
+        className={`
+          relative cursor-pointer text-[var(--color-text-primary)] 
+          hover:text-[var(--color-primary)] transition-colors duration-200
+          ${isActive ? 'text-[var(--color-primary)]' : ''}
+        `}
+        onClick={() => navigate(to)}
+      >
+        {label}
       </div>
     );
   }

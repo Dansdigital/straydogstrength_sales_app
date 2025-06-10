@@ -7,4 +7,5 @@ export const webhookProcess = defineFunction({
   },
   timeoutSeconds: 900,
   entry: "./handler.ts",
+  resourceGroupName: 'api',
 });

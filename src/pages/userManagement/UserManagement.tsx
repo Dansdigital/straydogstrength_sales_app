@@ -27,6 +27,7 @@ import AddUser from "./addUserDialog";
 import { generateClient } from "aws-amplify/api";
 import type { Schema } from "../../../amplify/data/resource";
 import { GraphQLResult } from "@aws-amplify/api-graphql";
+import { getCurrentUser } from "aws-amplify/auth";
 
 const client = generateClient<Schema>();
 
@@ -82,7 +83,15 @@ export default function UserManagement() {
   const [currentUserGroups, setCurrentUserGroups] = useState<string[] | null>(null);
 
   const fetchCurrentUserGroups = async () => {
-    setCurrentUserGroups([]);
+    try {
+      const currentUser = await getCurrentUser();
+      console.log("currentUser: ", currentUser);
+      const groups = currentUser.signInDetails?.loginId?.split('@')[0] === 'admin' ? ['Admin'] : ['Customer'];
+      setCurrentUserGroups(groups);
+    } catch (error) {
+      console.error('Error fetching user groups:', error);
+      setCurrentUserGroups([]);
+    }
   };
 
   useEffect(() => {
@@ -128,7 +137,7 @@ export default function UserManagement() {
   return (
     <DefaultPageTemplate
       title="User Management"
-      description="Manage your users and their access to your organization."
+      description="Manage users and their access to your Sales App."
     >
       <div className="w-full">
         <TableHeaderComponent

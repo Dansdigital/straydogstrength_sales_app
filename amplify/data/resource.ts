@@ -5,6 +5,9 @@ import { GeneratePDF } from "../functions/generate-pdf/resource";
 import { UploadPDF } from "../functions/upload-pdf/resource";
 import { webhookProcess } from "../functions/webhookProcess/resource";
 import { DeleteProduct } from "../functions/delete-product/resource";
+import { createUser } from "../functions/user-management/create-user/resource";
+import { deleteUser } from "../functions/user-management/delete-user/resource";
+import { updateUser } from "../functions/user-management/update-user/resource";
 
 const schema = a.schema({
   // ================================
@@ -95,7 +98,39 @@ const schema = a.schema({
   // ================================
   // functions queries and mutations
   // ================================
+  createNewUser: a
+    .mutation()
+    .arguments({
+      email: a.string().required(),
+      firstName: a.string().required(),
+      lastName: a.string().required(),
+      groups: a.string().array().required(),
+      tempPassword: a.string().required(),
+    })
+    .returns(a.json())
+    .authorization((allow) => [allow.groups(['Admin'])])
+    .handler(a.handler.function(createUser)),
 
+  updateAUser: a
+    .mutation()
+    .arguments({
+      userId: a.string().required(),
+      firstName: a.string().required(),
+      lastName: a.string().required(),
+      newGroups: a.string().array().required(),
+    })
+    .returns(a.json())
+    .authorization((allow) => [allow.groups(['Admin'])])
+    .handler(a.handler.function(updateUser)),
+
+  deleteAUser: a
+    .mutation()
+    .arguments({
+      userId: a.string().required(),
+    })
+    .returns(a.json())
+    .authorization((allow) => [allow.groups(['Admin'])])
+    .handler(a.handler.function(deleteUser)),
   GetAllProducts: a
     .query()
     .authorization(allow => [allow.authenticated()])
@@ -146,6 +181,9 @@ const schema = a.schema({
   allow.resource(GeneratePDF).to(['mutate', 'query', 'listen']),
   allow.resource(UploadPDF).to(['mutate', 'query', 'listen']),
   allow.resource(GetAllProducts).to(['query', 'listen', 'mutate']),
+  allow.resource(createUser).to(['mutate', 'query', 'listen']),
+  allow.resource(deleteUser).to(['mutate', 'query', 'listen']),
+  allow.resource(updateUser).to(['mutate', 'query', 'listen']),
 ])
 
 export type Schema = ClientSchema<typeof schema>;
