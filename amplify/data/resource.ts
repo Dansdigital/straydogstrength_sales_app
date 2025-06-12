@@ -40,6 +40,8 @@ const schema = a.schema({
         url: a.string(),
       }),
       status: a.string(),
+      sync_status: a.enum(['PENDING', 'SYNCED', 'FAILED']),
+      last_synced_at: a.datetime(),
       s3_pdf_path: a.string(),
       product_features: a.hasMany('ProductFeature', 'product_id'),
       product_specs: a.hasMany('ProductSpec', 'product_id'),
@@ -48,6 +50,14 @@ const schema = a.schema({
     .secondaryIndexes((index) => [
       index('main_sku')
     ])
+    .identifier(['product_id'])
+    .authorization((allow) => [allow.authenticated().to(['read', 'create', 'update', 'delete']), allow.publicApiKey()]),
+
+  ProductSyncStatus: a
+    .model({
+      product_id: a.string().required(),
+      sync_status: a.enum(['PENDING', 'SYNCED', 'FAILED']),
+    })
     .identifier(['product_id'])
     .authorization((allow) => [allow.authenticated().to(['read', 'create', 'update', 'delete']), allow.publicApiKey()]),
 

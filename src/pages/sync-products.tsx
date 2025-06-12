@@ -78,7 +78,21 @@ export function SyncProducts() {
             setLoading(false);
         }
     };
-
+    const handleSyncAllProducts = async () => {
+        setSyncing(true);
+        for (const product of products) {
+            try {
+                await handleSyncProduct(product);
+                await client.models.ProductSyncStatus.create({
+                    product_id: product.id.toString(),
+                    sync_status: 'SYNCED'
+                });
+            } catch (error) {
+                console.error('Error syncing product:', error);
+            }
+        }
+        setSyncing(false);
+    }
     const handleSyncProduct = async (product: ShopifyProduct) => {
         setSyncing(true);
         console.log('Syncing product:', product);
@@ -171,7 +185,21 @@ export function SyncProducts() {
                                     Syncing...
                                 </>
                             ) : (
-                                'Sync Products from Shopify'
+                                'Get Products from Shopify'
+                            )}
+                        </Button>
+                        <Button
+                            onClick={handleSyncAllProducts}
+                            disabled={loading}
+                            className="bg-[#cc2026] text-white hover:bg-[#a51920]"
+                        >
+                            {loading ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Syncing...
+                                </>
+                            ) : (
+                                'Sync All Products'
                             )}
                         </Button>
                         <div className="relative flex-1 max-w-md">
