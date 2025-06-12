@@ -1,3 +1,5 @@
+import { client } from "./webhookProcess/handler";
+
 export interface RawProductInput {
     id: string;
     title: string;
@@ -119,6 +121,49 @@ export async function getPdfMetafield(productId: string, accessToken: string) {
     } catch (error) {
         console.error("Error fetching PDF metafield:", error);
         throw error;
+    }
+}
+
+export async function createProductDynamoDB(productData: ProductData) {
+    try {
+        const product = await client.models.Product.create({
+            product_id: productData.product_id,
+            main_sku: productData.sku,
+            title: productData.title,
+            description: productData.description,
+            main_image_url: productData.main_image_url,
+            main_pdf_link: {
+                id: productData.pdf.id,
+                url: productData.pdf.url,
+            },
+            status: productData.status,
+        });
+        for (const variant of productData.variants) {
+            await client.models.ProductVariant.create({
+                product_id: productData.product_id,
+                variant_id: variant.id,
+                sku: variant.sku,
+                title: variant.title,
+                pdfLink: variant.pdfLink,
+            });
+        }
+        for (const feature of productData.features || []) {
+            await client.models.ProductFeature.create({
+                product_id: productData.product_id,
+                title: feature.title,
+                image: feature.imageSrc,
+            });
+        }
+        for (const spec of productData.product_specs || []) {
+            await client.models.ProductSpec.create({
+                product_id: productData.product_id,
+                key: spec.key,
+                value: spec.value,
+            });
+        }
+        return product;
+    } catch (error) {
+        console.error('Error creating product:', error);
     }
 }
 
@@ -297,4 +342,6 @@ export async function getMediaImageUrl(mediaImageId: string, accessToken: string
         console.error("Error fetching media image URL:", error);
         throw error;
     }
-} 
+}
+
+

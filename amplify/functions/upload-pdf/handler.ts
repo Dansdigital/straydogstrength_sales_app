@@ -69,18 +69,18 @@ async function deleteFile(fileId: string) {
     }
 }
 
-async function uploadPdf(pdfurl: string) {
+async function uploadPdf(pdfurl: string, shopifyAccessToken: string) {
     const shopifyResponse = await fetch('https://011075-5.myshopify.com/admin/api/2024-04/graphql.json', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-Shopify-Access-Token': SHOPIFY_ACCESS_TOKEN
+            'X-Shopify-Access-Token': shopifyAccessToken
         },
         body: JSON.stringify({
             query: "mutation fileCreate($files: [FileCreateInput!]!) { fileCreate(files: $files) { files { id } } }",
             variables: {
                 files: {
-                    alt: "test",
+                    alt: "Product PDF",
                     contentType: "FILE",
                     originalSource: pdfurl
                 }
@@ -101,7 +101,7 @@ async function uploadPdf(pdfurl: string) {
     };
 }
 
-async function createPdfLink(productId: string, value: string) {
+async function createPdfLink(productId: string, value: string, shopifyAccessToken: string) {
     try {
         const response = await fetch(
             "https://011075-5.myshopify.com/admin/api/2024-10/graphql.json",
@@ -109,7 +109,7 @@ async function createPdfLink(productId: string, value: string) {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "X-Shopify-Access-Token": SHOPIFY_ACCESS_TOKEN,
+                    "X-Shopify-Access-Token": shopifyAccessToken,
                 },
                 body: JSON.stringify({
                     query: `
@@ -158,10 +158,145 @@ async function createPdfLink(productId: string, value: string) {
     }
 }
 
+interface VariantPdfMetafieldResponse {
+    data: {
+        productVariant: {
+            title: string;
+            sku: string;
+            pdfLink: {
+                value: string;
+            } | null;
+        };
+    };
+}
+
+async function getVariantPdfMetafield(variantId: string, shopifyAccessToken: string) {
+    try {
+        const response = await fetch(
+            "https://011075-5.myshopify.com/admin/api/2024-07/graphql.json",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-Shopify-Access-Token": shopifyAccessToken,
+                },
+                body: JSON.stringify({
+                    query: `
+                        query ProductVariantMetafield($namespace: String!, $key: String!, $ownerId: ID!) {
+                            productVariant(id: $ownerId) {
+                                title
+                                sku
+                                pdfLink: metafield(namespace: $namespace, key: $key) {
+                                    value
+                                }
+                            }
+                        }`,
+                    variables: {
+                        namespace: "custom",
+                        key: "pdf_link",
+                        ownerId: `gid://shopify/ProductVariant/${variantId}`
+                    }
+                })
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json() as VariantPdfMetafieldResponse;
+        return {
+            success: true,
+            variant: data?.data?.productVariant,
+            pdfLink: data?.data?.productVariant?.pdfLink?.value
+        };
+    } catch (error) {
+        console.error("Error fetching variant PDF metafield:", error);
+        throw error;
+    }
+}
+
+interface VariantMetafieldUpdateResponse {
+    data: {
+        metafieldsSet: {
+            metafields: Array<{
+                id: string;
+                key: string;
+                value: string;
+                namespace: string;
+                type: string;
+            }>;
+            userErrors: Array<{
+                field: string;
+                message: string;
+            }>;
+        };
+    };
+}
+
+async function updateVariantPdfLink(variantId: string, fileId: string, shopifyAccessToken: string) {
+    try {
+        const response = await fetch(
+            "https://011075-5.myshopify.com/admin/api/2024-10/graphql.json",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-Shopify-Access-Token": shopifyAccessToken,
+                },
+                body: JSON.stringify({
+                    query: `
+                        mutation UpdateVariantMetafield {
+                            metafieldsSet(
+                                metafields: [
+                                    {
+                                        ownerId: "${variantId}",
+                                        namespace: "custom",
+                                        key: "pdf_link",
+                                        type: "file_reference",
+                                        value: "${fileId}"
+                                    }
+                                ]
+                            ) {
+                                metafields {
+                                    id
+                                    key
+                                    value
+                                    namespace
+                                    type
+                                }
+                                userErrors {
+                                    field
+                                    message
+                                }
+                            }
+                        }`,
+                    variables: {}
+                })
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json() as VariantMetafieldUpdateResponse;
+        return {
+            success: !data?.data?.metafieldsSet?.userErrors?.length,
+            metafield: data?.data?.metafieldsSet?.metafields?.[0],
+            errors: data?.data?.metafieldsSet?.userErrors || []
+        };
+    } catch (error) {
+        console.error("Error updating variant PDF link metafield:", error);
+        throw error;
+    }
+}
+
 export const handler = async (event: {
     arguments: {
         productId: string,
-        pdfUrl: string
+        pdfUrl: string,
+        type: string
     }
 }) => {
     try {
@@ -169,18 +304,29 @@ export const handler = async (event: {
             throw new Error('No arguments provided');
         }
 
-        const { productId, pdfUrl } = event.arguments;
-        if (!productId || !pdfUrl) {
-            throw new Error('Product ID and PDF URL are required');
+        const { productId, pdfUrl, type } = event.arguments;
+        if (!productId || !pdfUrl || !type) {
+            throw new Error('Product ID, PDF URL, and type are required');
         }
-        const newPdfUrl = await uploadPdf(pdfUrl);
-        const pdfMetafield = await getPdfMetafield(productId, SHOPIFY_ACCESS_TOKEN);
-        if (pdfMetafield) {
-            await deleteFile(pdfMetafield.value);
-        }
-        const result = await createPdfLink(productId, newPdfUrl.fileId);
 
-        return result;
+        const newPdfUrl = await uploadPdf(pdfUrl, SHOPIFY_ACCESS_TOKEN);
+
+        if (type === 'main') {
+            const pdfMetafield = await getPdfMetafield(productId, SHOPIFY_ACCESS_TOKEN);
+            if (pdfMetafield) {
+                await deleteFile(pdfMetafield.value);
+            }
+            const result = await createPdfLink(productId, newPdfUrl.fileId, SHOPIFY_ACCESS_TOKEN);
+            return result;
+        } else {
+            const variantPdfMetafield = await getVariantPdfMetafield(productId, SHOPIFY_ACCESS_TOKEN);
+            if (variantPdfMetafield.pdfLink) {
+                await deleteFile(variantPdfMetafield.pdfLink);
+            }
+            const result = await updateVariantPdfLink(productId, newPdfUrl.fileId, SHOPIFY_ACCESS_TOKEN);
+            return result;
+        }
+
     } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : 'Failed to process product';
         console.error('Error processing raw product:', error);

@@ -1,40 +1,21 @@
 import type { APIGatewayProxyHandler } from "aws-lambda";
-import { getProductData } from './helper/getProductData';
-import { hasProductDataChanged } from './helper/compareProductData';
-import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
+import { getProductData } from '../getProductData';
+import { hasProductDataChanged } from './compareProductData';
 import { getAmplifyDataClientConfig } from "@aws-amplify/backend/function/runtime";
 import { env } from "$amplify/env/webhook-process";
 import { Amplify } from 'aws-amplify';
 import { generateClient } from "aws-amplify/data";
 import { type Schema } from "../../data/resource";
-import { type ProductData } from '../services';
+import { type ProductData, createProductDynamoDB } from '../services';
 
 const SHOPIFY_ACCESS_TOKEN = env.SHOPIFY_ACCESS_TOKEN;
 export const client = generateClient<Schema>();
 
-// Initialize Lambda client
-const lambdaClient = new LambdaClient({
-  region: env.AWS_REGION || 'us-east-2'
-});
-
-// Function to call generate-pdfs Lambda
 async function callGeneratePDFs(productData: any) {
   try {
-    const command = new InvokeCommand({
-      FunctionName: process.env.GENERATE_PDFS_FUNCTION_NAME || 'generate-pdfs',
-      Payload: JSON.stringify({
-        arguments: {
-          ProductArray: [productData]
-        }
-      })
+    const result = await client.mutations.GeneratePDF({
+      Product: JSON.stringify(productData)
     });
-
-    const response = await lambdaClient.send(command);
-    if (!response.Payload) {
-      throw new Error('No payload received from generate-pdfs Lambda');
-    }
-
-    const result = JSON.parse(Buffer.from(response.Payload).toString());
     return result;
   } catch (error) {
     console.error('Error calling generate-pdfs Lambda:', error);
@@ -42,47 +23,23 @@ async function callGeneratePDFs(productData: any) {
   }
 }
 
-async function createProduct(productData: ProductData) {
-  try {
-    const product = await client.models.Product.create({
-      product_id: productData.product_id,
-      main_sku: productData.sku,
-      title: productData.title,
-      description: productData.description,
-      main_image_url: productData.main_image_url,
-      main_pdf_link: {
-        id: productData.pdf.id,
-        url: productData.pdf.url,
-      },
-      status: productData.status,
-    });
+async function makeVariantsForPDF(productData: any) {
+  let output = [];
+
+  if (productData.variants.length > 0) {
     for (const variant of productData.variants) {
-      await client.models.ProductVariant.create({
-        product_id: productData.product_id,
-        variant_id: variant.id,
+      output.push({
         sku: variant.sku,
-        title: variant.title,
-        pdfLink: variant.pdfLink,
+        title: productData.title,
+        product_specs: productData.product_specs,
+        description: productData.description,
+        product_features: productData.product_features,
+        main_image_url: productData.main_image_url,
       });
     }
-    for (const feature of productData.features || []) {
-      await client.models.ProductFeature.create({
-        product_id: productData.product_id,
-        title: feature.title,
-        image: feature.imageSrc,
-      });
-    }
-    for (const spec of productData.product_specs || []) {
-      await client.models.ProductSpec.create({
-        product_id: productData.product_id,
-        key: spec.key,
-        value: spec.value,
-      });
-    }
-    return product;
-  } catch (error) {
-    console.error('Error creating product:', error);
   }
+
+  return output;
 }
 
 export const handler: APIGatewayProxyHandler = async (event) => {
@@ -104,29 +61,44 @@ export const handler: APIGatewayProxyHandler = async (event) => {
 
     webhookData = JSON.parse(event.body);
 
+    if (!SHOPIFY_ACCESS_TOKEN) {
+      throw new Error('SHOPIFY_ACCESS_TOKEN is not defined in environment variables');
+    }
+
     const productData: ProductData = await getProductData(webhookData, SHOPIFY_ACCESS_TOKEN);
-    console.log("Product data:\n", productData);
+    // console.log("Product data:\n", productData);
 
     if (event.headers['X-Shopify-Topic'] === 'products/update') {
       console.log("Product update");
-
+      const test = await client.models.Product.get({ product_id: productData.product_id });
+      console.log("test: ", test);
       // verify that the product data has changed
-      const hasChanged = await hasProductDataChanged(productData);
+      // const hasChanged = await hasProductDataChanged(productData);
+      const hasChanged = true;
       if (hasChanged) {
+
         console.log("Product data has changed");
         // delete product record
-        const deleteProduct = await client.mutations.DeleteProductLambda({
+        await client.mutations.DeleteProductLambda({
           productId: productData.product_id,
         });
-        console.log("Deleted product record:", deleteProduct);
 
         // create product record
-        const product = await createProduct(productData);
-        console.log("Created product record:", product);
+        await createProductDynamoDB(productData);
+
+        // create pdfs
+        // let variantResults = [];
+        const mainPDFResult = await callGeneratePDFs(productData);
+        // const variantsForPDF = await makeVariantsForPDF(productData);
+        // for (const variant of variantsForPDF) {
+        //   const variantPDFResult = await callGeneratePDFs(variant);
+        //   variantResults.push(variantPDFResult);
+        // }
+        // console.log("PDF result:", mainPDFResult);
+        // console.log("Variant PDF results:", variantResults);
       } else {
         console.log("Product data has not changed");
       }
-      // create pdfs
       // send pdfs to s3
       // update product record with pdf url
     }
@@ -142,58 +114,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       };
     }
 
-    // const url = await getMediaImageUrl("gid://shopify/ProductImage/42900839006458");
-    // console.log("URL: ", url);
 
-    if (!SHOPIFY_ACCESS_TOKEN) {
-      throw new Error('SHOPIFY_ACCESS_TOKEN is not defined in environment variables');
-    }
-
-
-
-    // Check if data has changed
-    // const hasChanged = await hasProductDataChanged(productData);
-    // console.log("Has changed:", hasChanged);
-
-    // if (!hasChanged) {
-    //   return {
-    //     statusCode: 200,
-    //     body: JSON.stringify({ 
-    //       message: "No changes detected",
-    //       productId: productData.product_id
-    //     })
-    //   };
-    // }
-
-    // // Initialize the Amplify Data client
-    // const client = generateClient<Schema>();
-
-    // // Create/Update the product record
-    // const product = await client.models.Product.create({
-    //   product_id: productData.product_id,
-    //   sku: productData.sku,
-    //   title: productData.title,
-    //   description: productData.description,
-    //   main_image_url: productData.main_image_url,
-    //   pdf: productData.pdf.url,
-    //   status: productData.status,
-    //   error: productData.error,
-    // });
-
-    // // If there are features, create them
-    // if (productData.features) {
-    //   for (const feature of productData.features) {
-    //     await client.models.ProductFeature.create({
-    //       title: feature.title,
-    //       image: feature.imageSrc,
-    //       product_id: productData.product_id,
-    //     });
-    //   }
-    // }
-
-    // If there are specs, create them
-
-    // console.log("Created product record:", product);
 
     return {
       statusCode: 200,

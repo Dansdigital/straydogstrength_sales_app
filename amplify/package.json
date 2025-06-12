@@ -1,3 +1,12 @@
 {
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "@types/sharp": "^0.31.1"
+  },
+  "overrides": {
+    "sharp": {
+      "os": "linux",
+      "cpu": "x64"
+    }
+  }
 }

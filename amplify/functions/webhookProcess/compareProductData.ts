@@ -1,5 +1,5 @@
-import { type ProductData } from '../../services';
-import { client } from '../handler';
+import { type ProductData } from '../services';
+import { client } from './handler';
 
 export async function hasProductDataChanged(productData: ProductData): Promise<boolean> {
   try {

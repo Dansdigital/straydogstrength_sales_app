@@ -6,7 +6,7 @@ import {
     getProductImageUrl,
     getMetaObject,
     getMediaImageUrl
-} from '../../services';
+} from './services';
 
 const SHOPIFY_ACCESS_TOKEN = process.env.SHOPIFY_ACCESS_TOKEN;
 

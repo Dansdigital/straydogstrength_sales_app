@@ -6,7 +6,7 @@ import {
   LambdaIntegration,
   RestApi,
 } from "aws-cdk-lib/aws-apigateway";
-import { Policy, PolicyStatement } from "aws-cdk-lib/aws-iam";
+import { Effect, Policy, PolicyStatement } from "aws-cdk-lib/aws-iam";
 import { auth } from "./auth/resource";
 import { data } from "./data/resource";
 import { storage } from './storage/resource';
@@ -86,7 +86,7 @@ backend.addOutput({
   },
 });
 
-export const bucketName = backend.storage.resources.bucket.bucketName;
+const bucketName = backend.storage.resources.bucket.bucketName;
 
 const s3Policy = new PolicyStatement({
   actions: [

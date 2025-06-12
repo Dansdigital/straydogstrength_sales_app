@@ -13,7 +13,9 @@ import ResetPassword from "./components/auth/ResetPassword";
 import ChangePassword from "./components/auth/ChangePassword";
 import OrgUsers from "./pages/userManagement/UserManagement.tsx";
 import outputs from "../amplify_outputs.json";
-import { RealProducts } from "./pages/realProducts.tsx";
+import { RealProducts } from "./pages/products.tsx";
+import { Reports } from "./pages/reports.tsx";
+import { SyncProducts } from "./pages/sync-products.tsx";
 import Test from "./pages/test.tsx";
 
 Amplify.configure(outputs);
@@ -43,6 +45,22 @@ const Root = () => (
           element={
             <AuthGuard>
               <RealProducts />
+            </AuthGuard>
+          }
+        />
+        <Route
+          path="sync-products"
+          element={
+            <AuthGuard>
+              <SyncProducts />
+            </AuthGuard>
+          }
+        />
+        <Route
+          path="reports"
+          element={
+            <AuthGuard>
+              <Reports />
             </AuthGuard>
           }
         />

@@ -740,3 +740,4 @@ export async function getShopifyProducts() {
     throw error;
   }
 }
+

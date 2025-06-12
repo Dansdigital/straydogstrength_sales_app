@@ -88,26 +88,30 @@ export default function Layout() {
               <img
                 src="/SD_red_header_LOGO.png"
                 alt="Stray Dog Strength Logo"
-                className="w-[300px]"
+                className="w-[250px]"
               />
             </div>
-
-            {/* Navigation Menu */}
-            <nav className="flex items-center gap-8">
-              <NavLink to="/products" label="Products" />
-              {user?.groups.includes('Admin') && (
-                <NavLink to="/user-management" label="User Management" />
-              )}
-            </nav>
-
-            {/* Sign Out Button */}
             <div className="flex items-center gap-4">
-              <button
-                onClick={handleSignOut}
-                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md transition-colors"
-              >
-                Sign out
-              </button>
+              {/* Navigation Menu */}
+              <nav className="flex items-center gap-4">
+                <NavLink to="/products" label="Products" />
+                <NavLink to="/sync-products" label="Sync Products" />
+                <NavLink to="/reports" label="Reports" />
+                {user?.groups.includes('Admin') && (
+                  <NavLink to="/user-management" label="User Management" />
+                )}
+                <NavLink to="/test" label="Test" />
+              </nav>
+
+              {/* Sign Out Button */}
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={handleSignOut}
+                  className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md transition-colors"
+                >
+                  Sign out
+                </button>
+              </div>
             </div>
           </div>
         </header>

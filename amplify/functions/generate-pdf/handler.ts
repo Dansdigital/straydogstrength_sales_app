@@ -1,12 +1,14 @@
-import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
-import { dirname, join } from "path";
+import { PDFDocument, rgb, StandardFonts, PDFPage } from "pdf-lib";
+import { existsSync, readFileSync } from "fs";
+import { join } from "path";
 import fontkit from "@pdf-lib/fontkit";
-import { S3Client, GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
-import { bucketName } from "../../backend";
-import fetch from 'node-fetch';
-// import '@fontsource-variable/teko';
-// import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { getUrl, uploadData } from 'aws-amplify/storage';
+import { Amplify } from 'aws-amplify';
+import { getAmplifyDataClientConfig } from "@aws-amplify/backend/function/runtime";
+import { env } from '$amplify/env/generate-pdf';
+
+const bucketName = env.SALES_APP_BUCKET_NAME;
+const region = env.AWS_REGION;
 
 interface TextOptions {
     x?: number;
@@ -23,11 +25,7 @@ interface ProductSpec {
 
 interface ProductFeature {
     title: string;
-    image?: string;
-}
-
-interface ProductVariant {
-    sku: string;
+    imageSrc?: string;
 }
 
 interface ProductImage {
@@ -35,40 +33,55 @@ interface ProductImage {
 }
 
 interface ProductData {
+    product_id: string;
     title: string;
-    variants: ProductVariant[];
     image?: ProductImage;
     product_specs?: ProductSpec[];
     description?: string;
-    product_features?: ProductFeature[];
+    features?: ProductFeature[];
     sku?: string;
     main_image_url?: string;
 }
 
-// Add this helper function to get files from S3
-async function getFileFromS3(bucket: string, key: string): Promise<Buffer> {
-    const s3Client = new S3Client({
-        region: 'us-east-2'
-    });
-    const command = new GetObjectCommand({
-        Bucket: bucket,
-        Key: key
-    });
+// Add validation function at the top level
+function validateProductData(product: ProductData): string[] {
+    const errors: string[] = [];
 
+    if (!product.title) {
+        errors.push('Product title is required');
+    }
+
+    if (!product.sku) {
+        errors.push('Product SKU is required');
+    }
+
+    if (!product.main_image_url) {
+        errors.push('Product main image URL is required');
+    }
+
+    return errors;
+}
+
+async function getFileFromS3(filePath: string, bucketName: string, region: string) {
     try {
-        const response = await s3Client.send(command);
-        const chunks: Uint8Array[] = [];
-
-        // @ts-ignore - response.Body.transformToByteArray() exists but TypeScript doesn't know about it
-        const bodyContents = await response.Body.transformToByteArray();
-        return Buffer.from(bodyContents);
+        const result = await getUrl({
+            path: filePath,
+            options: {
+                bucket: {
+                    bucketName: bucketName,
+                    region: region
+                }
+            }
+        });
+        const response = await fetch(result.url.href);
+        const arrayBuffer = await response.arrayBuffer();
+        return Buffer.from(arrayBuffer);
     } catch (error) {
-        console.error(`Error fetching file ${key} from S3:`, error);
+        console.error(`Error fetching file ${filePath} from S3:`, error);
         throw error;
     }
 }
 
-// Add this helper function at the top of the file after the interfaces
 function parseHTML(html: string): string {
     return html
         .replace(/<br\s*\/?>/gi, '\n')  // Convert <br> tags to newlines
@@ -88,47 +101,52 @@ function parseHTML(html: string): string {
 }
 
 async function generateProductPDF(productData: ProductData) {
-    try {
-        // Initialize S3 client
-        // const s3Client = new S3Client({ region: process.env.REGION || 'us-east-1' });
-        console.log('Generating PDF for product:', productData);
-        const pdfDoc = await PDFDocument.create();
+    // Validate product data first
+    const validationErrors = validateProductData(productData);
+    if (validationErrors.length > 0) {
+        throw new Error(`Invalid product data: ${validationErrors.join(', ')}`);
+    }
 
-        // Add this line to register fontkit
+    try {
+        // Create PDF with compression settings
+        const pdfDoc = await PDFDocument.create();
         pdfDoc.registerFontkit(fontkit);
 
-        // Declare font variables in the outer scope
         let font;
         let boldFont;
         let logo;
-        console.log('bucketName:', bucketName);
-        // const bucketName = storage;
-        // const bucketName = "amplify-amplifyvitereacttem-internalbucket17f3e71c-xwzpruxmczad"
 
         try {
-            // Get bucket name from environment variable
-            // const bucketName = process.env.STORAGE_ASSETS_BUCKET_NAME;
-            // console.log('bucketName:', bucketName);
-            if (!bucketName) {
-                throw new Error('S3 bucket name not configured');
+            // Define font paths and validate their existence
+            const fontPaths = {
+                regular: 'assets/fonts/Teko-Regular.ttf',
+                bold: 'assets/fonts/Teko-SemiBold.ttf',
+                logo: 'assets/SD header logo.png'
+            };
+
+            // Validate all required assets exist
+            for (const path of Object.values(fontPaths)) {
+                try {
+                    await getFileFromS3(path, bucketName, region);
+                } catch (error) {
+                    throw new Error(`Failed to load required asset: ${path} - ${error instanceof Error ? error.message : 'Unknown error'}`);
+                }
             }
 
-            // Fetch fonts from S3
-            const regularFontBytes = await getFileFromS3(bucketName, 'assets/fonts/Teko-Regular.ttf');
-            const boldFontBytes = await getFileFromS3(bucketName, 'assets/fonts/Teko-SemiBold.ttf');
-            const logoBytes = await getFileFromS3(bucketName, 'assets/SD-header-logo.png');
+            const regularFontBytes = await getFileFromS3(fontPaths.regular, bucketName, region);
+            const boldFontBytes = await getFileFromS3(fontPaths.bold, bucketName, region);
+            const logoBytes = await getFileFromS3(fontPaths.logo, bucketName, region);
 
-            // Embed fonts
+            if (!regularFontBytes || !boldFontBytes || !logoBytes) {
+                throw new Error('Failed to load one or more required assets');
+            }
+
             font = await pdfDoc.embedFont(regularFontBytes);
             boldFont = await pdfDoc.embedFont(boldFontBytes);
-
-            // Store logo bytes for later use
             logo = await pdfDoc.embedPng(logoBytes);
         } catch (error) {
-            console.error("Error loading assets from S3:", error);
-            // Fallback to standard fonts if custom font fails
-            font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-            boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+            console.error("Error loading assets:", error);
+            throw new Error(`Failed to initialize PDF assets: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
 
         const page = pdfDoc.addPage([595.28, 841.89]); // A4 size
@@ -237,8 +255,15 @@ async function generateProductPDF(productData: ProductData) {
         if (productData.main_image_url) {
             try {
                 const imageResponse = await fetch(productData.main_image_url);
+                if (!imageResponse.ok) {
+                    throw new Error(`Failed to fetch product image: ${imageResponse.status}`);
+                }
+
                 const imageArrayBuffer = await imageResponse.arrayBuffer();
-                const image = await pdfDoc.embedJpg(imageArrayBuffer);
+                const imageBuffer = Buffer.from(imageArrayBuffer);
+
+                // Embed image with compression
+                const image = await pdfDoc.embedJpg(imageBuffer);
 
                 // Calculate image dimensions (50% of page width)
                 const pageWidth = page.getWidth();
@@ -383,7 +408,7 @@ async function generateProductPDF(productData: ProductData) {
         }
 
         // Add Features section
-        if (productData.product_features && productData.product_features.length > 0) {
+        if (productData.features && productData.features.length > 0) {
             currentY -= 200; // Add space before features
             writeText("FEATURES", {
                 size: titleSize,
@@ -398,20 +423,26 @@ async function generateProductPDF(productData: ProductData) {
             const spacing = 20;
             const startX = 20;
 
-
-            for (let i = 0; i < productData.product_features.length; i++) {
-                const feature = productData.product_features[i];
+            for (let i = 0; i < productData.features.length; i++) {
+                const feature = productData.features[i];
 
                 // Calculate position for this feature
                 const column = i % featuresPerRow;
                 const x = startX + column * (imageWidth + spacing);
 
                 // Add image if URL exists
-                if (feature.image) {
+                if (feature.imageSrc) {
                     try {
-                        const imageResponse = await fetch(feature.image);
+                        const imageResponse = await fetch(feature.imageSrc);
+                        if (!imageResponse.ok) {
+                            throw new Error(`Failed to fetch feature image: ${imageResponse.status}`);
+                        }
+
                         const imageArrayBuffer = await imageResponse.arrayBuffer();
-                        const image = await pdfDoc.embedJpg(imageArrayBuffer);
+                        const imageBuffer = Buffer.from(imageArrayBuffer);
+
+                        // Embed image with compression
+                        const image = await pdfDoc.embedJpg(imageBuffer);
                         const scaledDims = image.scale(imageWidth / image.width);
 
                         page.drawImage(image, {
@@ -433,10 +464,7 @@ async function generateProductPDF(productData: ProductData) {
                             });
                         }
                     } catch (error) {
-                        console.error(
-                            `Error embedding image for feature ${feature.title}:`,
-                            error
-                        );
+                        console.error(`Error embedding feature image:`, error);
                     }
                 }
             }
@@ -469,31 +497,12 @@ async function generateProductPDF(productData: ProductData) {
             color: rgb(0, 0, 0), // Black color
         });
 
-        // Save the PDF with a unique filename
-        const pdfBytes = await pdfDoc.save();
-        // const fileName = `${productData.title
-        //     .toLowerCase()
-        //     .replace(/\s+/g, "_")}.pdf`;
-
-        // Upload to S3 instead of saving locally
-        // try {
-        // Use the storage resource name as the bucket name
-        // This matches the name defined in amplify/storage/resource.ts
-        // const bucketName = process.env.STORAGE_PDFS_BUCKET_NAME || 'pdfs';
-        // console.log('bucketName:', bucketName);
-        // console.log('fileName:', fileName);
-        // await s3Client.send(
-        //     new PutObjectCommand({
-        //         Bucket: bucketName,
-        //         Key: `pdfs/${fileName}`,
-        //         Body: Buffer.from(pdfBytes),
-        //         ContentType: 'application/pdf',
-        //     })
-        // );
-
-        // Generate and return the S3 URL
-        // const s3Region = process.env.REGION || 'us-east-1';
-        // const s3Url = `https://${bucketName}.s3.${s3Region}.amazonaws.com/pdfs/${fileName}`
+        // Enhanced PDF compression settings when saving
+        const pdfBytes = await pdfDoc.save({
+            useObjectStreams: true,     // Enable object streams for better compression
+            addDefaultPage: false,      // Don't add empty pages
+            objectsPerTick: 50,         // Process objects in batches
+        });
 
         return pdfBytes;
     } catch (error) {
@@ -504,48 +513,108 @@ async function generateProductPDF(productData: ProductData) {
 
 export const handler = async (event: { arguments: { Product: ProductData } }) => {
     try {
-        if (!event.arguments?.Product) {
-            throw new Error('No product provided');
+        // Validate event structure
+        if (!event || typeof event !== 'object') {
+            throw new Error('Invalid event object received');
         }
-        console.log('bucketName:', bucketName);
+
+        if (!event.arguments || typeof event.arguments !== 'object') {
+            throw new Error('Invalid arguments object in event');
+        }
+
+        // Initialize Amplify with the correct configuration
+        try {
+            const { resourceConfig, libraryOptions } = await getAmplifyDataClientConfig(env);
+            if (!resourceConfig || !libraryOptions) {
+                throw new Error('Invalid Amplify configuration received');
+            }
+            Amplify.configure(resourceConfig, libraryOptions);
+        } catch (error) {
+            throw new Error(`Failed to initialize Amplify: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+
+        if (!event.arguments?.Product) {
+            throw new Error('No product provided in arguments');
+        }
+
         const product = event.arguments.Product;
+
+        // Validate product object
+        if (typeof product !== 'object') {
+            throw new Error('Invalid product object received');
+        }
+
         try {
             const pdfBytes = await generateProductPDF(product);
+            if (!pdfBytes || pdfBytes.length === 0) {
+                throw new Error('Generated PDF is empty');
+            }
+
             const base64PDF = Buffer.from(pdfBytes).toString('base64');
 
-            // Generate a unique filename for the PDF
-            const fileName = `${product.title.toLowerCase().replace(/\s+/g, "_")}_${Date.now()}.pdf`;
-            const s3Key = `pdfs/${fileName}`;
+            // Validate bucket configuration
+            if (!bucketName || !region) {
+                throw new Error('Invalid S3 bucket configuration');
+            }
 
-            // Initialize S3 client
-            const s3Client = new S3Client({ region: 'us-east-2' });
+            const { v4: uuidv4 } = require('uuid');
+            const fileName = `${product.title.toLowerCase().replace(/\s+/g, "_")}_${Date.now()}_${uuidv4()}.pdf`;
 
-            // Upload PDF to S3
-            await s3Client.send(
-                new PutObjectCommand({
-                    Bucket: bucketName,
-                    Key: s3Key,
-                    Body: Buffer.from(pdfBytes),
-                    ContentType: 'application/pdf',
-                })
-            );
+            if (!fileName) {
+                throw new Error('Failed to generate valid filename');
+            }
 
-            // Generate the S3 URL
-            const s3Url = `https://${bucketName}.s3.us-east-2.amazonaws.com/${s3Key}`;
+            try {
+                const filePath = `pdfs/${fileName}`;
 
-            return {
-                title: product.title,
-                pdfBase64: base64PDF,
-                pdfUrl: s3Url,
-                s3Key: s3Key
-            };
-        } catch (error) {
-            console.error(`Error generating PDF for product ${product.title}:`, error);
-            throw new Error(error instanceof Error ? error.message : 'Unknown error');
+                // Upload the file and wait for it to complete
+                try {
+                    await uploadData({
+                        path: filePath,
+                        data: pdfBytes,
+                        options: {
+                            bucket: {
+                                bucketName: bucketName,
+                                region: region
+                            }
+                        }
+                    });
+
+                    // Verify the file exists in S3
+                    const uploadedFileUrl = await getUrl({
+                        path: filePath,
+                        options: {
+                            bucket: {
+                                bucketName: bucketName,
+                                region: region
+                            }
+                        }
+                    });
+
+                    if (!uploadedFileUrl?.url) {
+                        throw new Error('Uploaded file not found in S3');
+                    }
+
+                    return {
+                        fileName: fileName,
+                        base64PDF: base64PDF,
+                        fileUrl: uploadedFileUrl.url.href
+                    };
+                } catch (uploadError) {
+                    throw new Error(`Failed to upload or verify PDF: ${uploadError instanceof Error ? uploadError.message : 'Unknown error'}`);
+                }
+            } catch (error) {
+                console.error(`Error generating PDF for product ${product.title}:`, error);
+                throw new Error(`PDF generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            }
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : 'Failed to process product';
+            console.error('Error processing product:', error);
+            throw new Error(`PDF generation handler failed: ${errorMessage}`);
         }
     } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : 'Failed to process product';
         console.error('Error processing product:', error);
-        throw new Error(errorMessage);
+        throw new Error(`PDF generation handler failed: ${errorMessage}`);
     }
 };

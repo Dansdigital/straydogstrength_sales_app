@@ -40,6 +40,7 @@ const schema = a.schema({
         url: a.string(),
       }),
       status: a.string(),
+      s3_pdf_path: a.string(),
       product_features: a.hasMany('ProductFeature', 'product_id'),
       product_specs: a.hasMany('ProductSpec', 'product_id'),
       product_variants: a.hasMany('ProductVariant', 'product_id'),
@@ -56,6 +57,7 @@ const schema = a.schema({
     sku: a.string(),
     pdfLink: a.string(),
     product_id: a.string(),
+    s3_pdf_path: a.string(),
     product: a.belongsTo('Product', 'product_id'),
   })
     .secondaryIndexes((index) => [
@@ -168,7 +170,8 @@ const schema = a.schema({
     .mutation()
     .arguments({
       productId: a.string().required(),
-      pdfUrl: a.string().required()
+      pdfUrl: a.string().required(),
+      type: a.string().required()
     })
     .authorization(allow => [allow.authenticated()])
     .handler(a.handler.function(UploadPDF))

@@ -13,8 +13,8 @@ import { Input } from "../components/ui/input";
 import { Progress } from "../components/ui/progress";
 import { Button } from "../components/ui/button";
 import { Checkbox } from "../components/ui/checkbox";
-// import { GeneratePDF } from "@/graphql/mutations";
-// import { generateClient as generateApiClient } from "aws-amplify/api";
+import { Loader2, ArrowUp, ArrowDown } from "lucide-react";
+import DefaultPageTemplate from "./defaultPageTemplate";
 import {
     Select,
     SelectContent,
@@ -22,9 +22,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from "../components/ui/select";
-// import { uploadData, getUrl, remove } from 'aws-amplify/storage';
-import { Loader2 } from "lucide-react";
-// import { GraphQLResult } from '@aws-amplify/api';
 
 // Define the Product type based on your schema
 type Product = {
@@ -45,20 +42,12 @@ type Product = {
     created_at?: string | null;
     product_features?: ProductFeature[];
     product_specs?: ProductSpec[];
+    order?: number; // Added for ordering
 };
 
-// Add a type for the parsed PDF data
 type PdfData = {
     id: string;
     url: string;
-};
-
-// Update the response type from the lambda function
-type PDFResponse = {
-    title: string;
-    pdfBase64: string;
-    s3Url?: string;
-    error?: string;
 };
 
 type ProductFeature = {
@@ -71,26 +60,7 @@ type ProductSpec = {
     value?: string | null;
 };
 
-// Add this type before the RealProducts component
-type ProductListResponse = {
-    data?: {
-        listProducts?: {
-            items: Array<{
-                product_id: string;
-                description?: string | null;
-                main_image_url?: string | null;
-                main_pdf_link?: { id?: string; url?: string } | null;
-                main_sku?: string | null;
-                status?: string | null;
-                title?: string | null;
-                product_features: { items: ProductFeature[] };
-                product_specs: { items: ProductSpec[] };
-            }>;
-        };
-    };
-};
-
-export function RealProducts() {
+export function Reports() {
     const [products, setProducts] = useState<Product[]>([]);
     const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
@@ -98,29 +68,25 @@ export function RealProducts() {
     const [searchTerm, setSearchTerm] = useState('');
     const [progress, setProgress] = useState(0);
     const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
-    const [generatedPDFs, setGeneratedPDFs] = useState<PDFResponse[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
-    const [hasMore, setHasMore] = useState(true);
-    const [nextToken, setNextToken] = useState<string | null>(null);
-    const [isLoadingMore, setIsLoadingMore] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
     const client = generateClient<Schema>();
 
     useEffect(() => {
-        setGeneratedPDFs([]);
         fetchProducts();
     }, []);
 
-    async function fetchProducts(token?: string | null) {
+    async function fetchProducts() {
         try {
             setProgress(10);
-            const response = await client.models.Product.list() as ProductListResponse;
-            console.log("Response:", response);
-            const rawProducts = response.data?.listProducts?.items || [];
-            console.log("Raw products:", rawProducts);
+            const response = await client.models.Product.list();
+            setProgress(20);
+            const rawProducts = response.data || [];
             const productsWithDetails: Product[] = [];
             for (const rawProduct of rawProducts) {
+                const features = await rawProduct.product_features();
+                const specs = await rawProduct.product_specs();
                 const product: Product = {
                     product_id: rawProduct.product_id,
                     description: rawProduct.description || null,
@@ -132,48 +98,28 @@ export function RealProducts() {
                     sku: rawProduct.main_sku || null,
                     status: rawProduct.status || null,
                     title: rawProduct.title || null,
-                    product_features: rawProduct.product_features.items,
-                    product_specs: rawProduct.product_specs.items
+                    product_features: features.data || [],
+                    product_specs: specs.data || [],
+                    order: 0 // Initialize order
                 }
                 productsWithDetails.push(product);
             }
 
-            setProgress(30);
-
             setProgress(90);
-
-            if (token) {
-                setProducts(prev => [...prev, ...productsWithDetails]);
-                setFilteredProducts(prev => [...prev, ...productsWithDetails]);
-            } else {
-                setProducts(productsWithDetails);
-                setFilteredProducts(productsWithDetails);
-            }
-
-            setNextToken(null); // Since this query doesn't support pagination
-            setHasMore(false); // Since this query doesn't support pagination
-
+            setProducts(productsWithDetails);
+            setFilteredProducts(productsWithDetails);
             setProgress(100);
         } catch (error) {
             console.error('Error fetching products:', error);
             setError(error instanceof Error ? error.message : 'Unknown error');
         } finally {
             setLoading(false);
-            setIsLoadingMore(false);
         }
     }
 
-    // Add load more function
-    const loadMore = async () => {
-        if (isLoadingMore || !hasMore) return;
-        setIsLoadingMore(true);
-        await fetchProducts(nextToken);
-    };
-
-    // Update search to work with all products
     const handleSearch = (term: string) => {
         setSearchTerm(term);
-        setCurrentPage(1); // Reset to first page when searching
+        setCurrentPage(1);
         if (term) {
             const filtered = products.filter(product =>
                 product.title?.toLowerCase().includes(term.toLowerCase()) ||
@@ -186,31 +132,23 @@ export function RealProducts() {
         }
     };
 
-    // Add a function to parse the PDF JSON string
-    const getPdfUrl = (pdfJson: string | null): string | null => {
-        if (!pdfJson) return null;
-        try {
-            const pdfData: PdfData = JSON.parse(pdfJson);
-            return pdfData.url;
-        } catch (error) {
-            console.error('Error parsing PDF JSON:', error);
-            return null;
-        }
-    };
-
-    // Add selection handlers
     const toggleProductSelection = (productId: string) => {
         setSelectedProducts(prev => {
             const newSelection = new Set(prev);
             if (newSelection.has(productId)) {
                 newSelection.delete(productId);
+                // Remove order when unselecting
+                setFilteredProducts(prev =>
+                    prev.map(p => p.product_id === productId ? { ...p, order: 0 } : p)
+                );
             } else {
                 newSelection.add(productId);
+                // Assign next available order number
+                const maxOrder = Math.max(...filteredProducts.map(p => p.order || 0), 0);
+                setFilteredProducts(prev =>
+                    prev.map(p => p.product_id === productId ? { ...p, order: maxOrder + 1 } : p)
+                );
             }
-            // Log the selected product with its features
-            const selectedProduct = products.find(p => p.product_id === productId);
-            console.log('Selected product:', selectedProduct);
-            // console.log('Product features:', selectedProduct?.product_features);
             return newSelection;
         });
     };
@@ -218,119 +156,57 @@ export function RealProducts() {
     const toggleAllSelection = () => {
         if (selectedProducts.size === filteredProducts.length) {
             setSelectedProducts(new Set());
+            setFilteredProducts(prev => prev.map(p => ({ ...p, order: 0 })));
         } else {
             setSelectedProducts(new Set(filteredProducts.map(p => p.product_id)));
+            // Assign order numbers sequentially
+            setFilteredProducts(prev =>
+                prev.map((p, index) => ({ ...p, order: index + 1 }))
+            );
         }
     };
 
-    const handleProcessSelected = async () => {
+    const moveProduct = (productId: string, direction: 'up' | 'down') => {
+        setFilteredProducts(prev => {
+            const products = [...prev];
+            const currentIndex = products.findIndex(p => p.product_id === productId);
+            if (currentIndex === -1) return prev;
+
+            const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+            if (newIndex < 0 || newIndex >= products.length) return prev;
+
+            // Swap orders
+            const tempOrder = products[currentIndex].order;
+            products[currentIndex].order = products[newIndex].order;
+            products[newIndex].order = tempOrder;
+
+            // Swap positions
+            [products[currentIndex], products[newIndex]] = [products[newIndex], products[currentIndex]];
+
+            return products;
+        });
+    };
+
+    const handleGenerateReport = async () => {
         setIsProcessing(true);
-        const selectedItems = filteredProducts.filter(p => selectedProducts.has(p.product_id));
-        console.log('Processing selected products:', selectedItems);
-
         try {
-            // for (const item of selectedItems) {
-            //     const response = await client.graphql({
-            //         query: GeneratePDF,
-            //         variables: {
-            //             Product: JSON.stringify(item)
-            //         }
-            //     });
-            //     console.log('Generated PDF:', response);
-            // }
-            // const response = await client.graphql({
-            //     query: GeneratePDFs,
-            //     variables: {
-            //         Product: JSON.stringify(selectedItems)
-            //     }
-            // });
+            // Get selected products in order
+            const orderedProducts = filteredProducts
+                .filter(p => selectedProducts.has(p.product_id))
+                .sort((a, b) => (a.order || 0) - (b.order || 0));
 
-            // console.log('Generated PDFs:', response);
-            // const pdfs = JSON.parse(response.data.GeneratePDFs);
-
-            // // Create an array to store PDFs with their S3 URLs
-            // const pdfWithUrls = await Promise.all(pdfs.map(async (pdf: PDFResponse) => {
-            //     if (pdf.pdfBase64 && !pdf.error) {
-            //         try {
-            //             const pdfBlob = base64ToBlob(pdf.pdfBase64, 'application/pdf');
-            //             const timestamp = new Date().getTime();
-            //             const sanitizedTitle = pdf.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-            //             const filename = `pdfs/${sanitizedTitle}_${timestamp}.pdf`;
-
-            //             const result = await uploadData({
-            //                 key: filename,
-            //                 data: pdfBlob,
-            //                 options: {
-            //                     contentType: 'application/pdf'
-            //                 }
-            //             }).result;
-
-            //             const { url } = await getUrl({ key: result.key });
-
-            //             try {
-            //                 const uploadResponse = await client.graphql({
-            //                     query: UploadPDF,
-            //                     variables: {
-            //                         productId: selectedItems[0].product_id,
-            //                         pdfUrl: url.toString()
-            //                     }
-            //                 });
-            //                 if (uploadResponse?.data?.UploadPDF) {
-            //                     await remove({ key: result.key });
-            //                     console.log('Successfully deleted file from S3:', result.key);
-            //                 }
-            //             } catch (error) {
-            //                 console.error('Error in upload process:', error);
-            //             }
-
-            //             return {
-            //                 ...pdf,
-            //                 s3Url: url
-            //             };
-            //         } catch (error) {
-            //             console.error('Error uploading PDF:', error);
-            //             return {
-            //                 ...pdf,
-            //                 error: 'Failed to upload PDF'
-            //             };
-            //         }
-            //     }
-            //     return pdf;
-            // }));
-
-            // setGeneratedPDFs(pdfWithUrls);
-
-            // // Open first PDF in new tab if available
-            // if (pdfWithUrls.length > 0 && pdfWithUrls[0].s3Url) {
-            //     window.open(pdfWithUrls[0].s3Url, '_blank');
-            // }
+            console.log('Generating report for ordered products:', orderedProducts);
+            // TODO: Implement report generation logic here
+            // This could involve calling an API endpoint or generating a PDF
 
         } catch (error) {
-            console.error('Error generating PDFs:', error);
+            console.error('Error generating report:', error);
         } finally {
             setIsProcessing(false);
         }
-        setIsProcessing(false);
     };
 
-    // Add helper function to convert base64 to Blob
-    // const base64ToBlob = (base64: string, type: string) => {
-    //     const binaryString = window.atob(base64);
-    //     const bytes = new Uint8Array(binaryString.length);
-    //     for (let i = 0; i < binaryString.length; i++) {
-    //         bytes[i] = binaryString.charCodeAt(i);
-    //     }
-    //     return new Blob([bytes], { type: type });
-    // };
-
-    // Add a function to view a specific PDF
-    // const viewPDF = (pdfBase64: string) => {
-    //     const pdfBlob = base64ToBlob(pdfBase64, 'application/pdf');
-    //     const pdfUrl = URL.createObjectURL(pdfBlob);
-    //     window.open(pdfUrl, '_blank');
-    // };
-
-    // Add these pagination utility functions
+    // Pagination utilities
     const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
@@ -354,23 +230,11 @@ export function RealProducts() {
     if (error) return <div className="text-red-500">Error: {error}</div>;
 
     return (
-        <div className="p-4">
-            <div className="mt-4 mb-4 flex justify-between items-center">
-                <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">Products</h1>
-                <div className="flex items-center gap-4">
-                    <span className="text-sm text-gray-500">
-                        {selectedProducts.size} selected
-                    </span>
-                    <Button
-                        onClick={handleProcessSelected}
-                        disabled={selectedProducts.size === 0}
-                        className={`bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)] ${selectedProducts.size === 0 ? 'cursor-not-allowed' : ''}`}
-                    >
-                        Process Selected
-                    </Button>
-                </div>
-            </div>
-            <div className="mb-4">
+        <DefaultPageTemplate
+            title="Reports"
+            description="Select and order products to generate reports"
+        >
+            <div className="flex flex-row justify-between mb-4">
                 <Input
                     type="text"
                     placeholder="Search products..."
@@ -378,7 +242,20 @@ export function RealProducts() {
                     onChange={(e) => handleSearch(e.target.value)}
                     className="w-1/4 text-[var(--color-text-primary)]"
                 />
+                <div className="flex items-center gap-4">
+                    <span className="text-sm text-gray-500">
+                        {selectedProducts.size} selected
+                    </span>
+                    <Button
+                        onClick={handleGenerateReport}
+                        disabled={selectedProducts.size === 0}
+                        className={`bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)] ${selectedProducts.size === 0 ? 'cursor-not-allowed' : ''}`}
+                    >
+                        Generate Report
+                    </Button>
+                </div>
             </div>
+
             <div className="max-h-[calc(100vh-200px)] overflow-y-auto">
                 <Table>
                     <TableHeader className="sticky top-0 bg-black z-10">
@@ -389,12 +266,12 @@ export function RealProducts() {
                                     onCheckedChange={toggleAllSelection}
                                 />
                             </TableHead>
+                            <TableHead className="w-[50px]">Order</TableHead>
                             <TableHead className="text-[var(--color-text-primary)]">Image</TableHead>
                             <TableHead className="text-[var(--color-text-primary)]">SKU</TableHead>
                             <TableHead className="text-[var(--color-text-primary)]">Title</TableHead>
                             <TableHead className="text-[var(--color-text-primary)]">Status</TableHead>
                             <TableHead className="text-[var(--color-text-primary)]">Features</TableHead>
-                            <TableHead className="text-[var(--color-text-primary)]">Specs</TableHead>
                             <TableHead className="text-[var(--color-text-primary)]">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -402,15 +279,36 @@ export function RealProducts() {
                         {currentItems.map((product) => (
                             <TableRow
                                 key={product.product_id}
-                                className={`hover:bg-[var(--color-bg-primary-hover)] transition-colors duration-200 cursor-pointer ${selectedProducts.has(product.product_id) ? 'bg-[var(--color-bg-primary-hover)]' : ''
-                                    }`}
-                                onClick={() => toggleProductSelection(product.product_id)}
+                                className={`hover:bg-[var(--color-bg-primary-hover)] transition-colors duration-200 ${selectedProducts.has(product.product_id) ? 'bg-[var(--color-bg-primary-hover)]' : ''}`}
                             >
-                                <TableCell onClick={(e) => e.stopPropagation()}>
+                                <TableCell>
                                     <Checkbox
                                         checked={selectedProducts.has(product.product_id)}
                                         onCheckedChange={() => toggleProductSelection(product.product_id)}
                                     />
+                                </TableCell>
+                                <TableCell>
+                                    {selectedProducts.has(product.product_id) && (
+                                        <div className="flex items-center gap-1">
+                                            <span className="text-sm">{product.order}</span>
+                                            <div className="flex flex-col">
+                                                <button
+                                                    onClick={() => moveProduct(product.product_id, 'up')}
+                                                    className="p-0.5 hover:bg-gray-200 rounded"
+                                                    disabled={product.order === 1}
+                                                >
+                                                    <ArrowUp className="h-3 w-3" />
+                                                </button>
+                                                <button
+                                                    onClick={() => moveProduct(product.product_id, 'down')}
+                                                    className="p-0.5 hover:bg-gray-200 rounded"
+                                                    disabled={product.order === selectedProducts.size}
+                                                >
+                                                    <ArrowDown className="h-3 w-3" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
                                 </TableCell>
                                 <TableCell>
                                     {product.main_image_url ? (
@@ -435,7 +333,7 @@ export function RealProducts() {
                                         {product.status}
                                     </span>
                                 </TableCell>
-                                <TableCell onClick={(e) => e.stopPropagation()}>
+                                <TableCell>
                                     {product.product_features && product.product_features.length > 0 ? (
                                         <div className="flex flex-wrap gap-2">
                                             {product.product_features.map((feature) => (
@@ -452,32 +350,12 @@ export function RealProducts() {
                                         <span className="text-gray-400">No features</span>
                                     )}
                                 </TableCell>
-                                <TableCell onClick={(e) => e.stopPropagation()}>
-                                    {product.product_specs && product.product_specs.length > 0 ? (
-                                        <div className="flex flex-wrap gap-2">
-                                            {product.product_specs.map((spec) => (
-                                                <span
-                                                    key={spec.key}
-                                                    className="px-2 py-1 rounded text-sm"
-                                                    title={`${spec.value}`}
-                                                >
-                                                    {spec.key}: {spec.value}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <span className="text-gray-400">No specs</span>
-                                    )}
-                                </TableCell>
-                                <TableCell onClick={(e) => e.stopPropagation()}>
+                                <TableCell>
                                     <button
-                                        className={`text-blue-600 hover:text-blue-800 mr-2 ${!product.pdf ? 'opacity-50 cursor-not-allowed' : ''
-                                            }`}
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            const pdfUrl = getPdfUrl(product.pdf?.url || null);
-                                            if (pdfUrl) {
-                                                window.open(pdfUrl, '_blank');
+                                        className={`text-blue-600 hover:text-blue-800 mr-2 ${!product.pdf ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        onClick={() => {
+                                            if (product.pdf?.url) {
+                                                window.open(product.pdf.url, '_blank');
                                             }
                                         }}
                                         disabled={!product.pdf}
@@ -489,22 +367,9 @@ export function RealProducts() {
                         ))}
                     </TableBody>
                 </Table>
-
-                {/* Add load more button */}
-                {hasMore && (
-                    <div className="mt-4 text-center">
-                        <Button
-                            onClick={loadMore}
-                            disabled={isLoadingMore}
-                            variant="outline"
-                        >
-                            {isLoadingMore ? 'Loading...' : 'Load More Products'}
-                        </Button>
-                    </div>
-                )}
             </div>
 
-            {/* Add pagination controls */}
+            {/* Pagination controls */}
             <div className="mt-4 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <span className="text-sm text-white">
@@ -520,7 +385,7 @@ export function RealProducts() {
                         <SelectTrigger className="w-[70px]">
                             <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="text-[var(--color-text-primary)] bg-[var(--color-bg-primary)]">
                             <SelectItem value="5">5</SelectItem>
                             <SelectItem value="10">10</SelectItem>
                             <SelectItem value="20">20</SelectItem>
@@ -556,45 +421,17 @@ export function RealProducts() {
                 </div>
             </div>
 
-            {/* Add PDF preview section if PDFs are generated */}
-            {generatedPDFs.length > 0 && (
-                <div className="mt-4">
-                    <h2 className="text-xl font-bold mb-2">Generated PDFs</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {generatedPDFs.map((pdf, index) => (
-                            <div
-                                key={index}
-                                className="p-4 border rounded-lg shadow-sm hover:shadow-md transition-shadow"
-                            >
-                                <h3 className="font-medium mb-2">{pdf.title}</h3>
-                                {pdf.error ? (
-                                    <p className="text-red-500">{pdf.error}</p>
-                                ) : (
-                                    <button
-                                        onClick={() => pdf.s3Url && window.open(pdf.s3Url, '_blank')}
-                                        className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
-                                        disabled={!pdf.s3Url}
-                                    >
-                                        View PDF
-                                    </button>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
             {/* Loading Overlay */}
             {isProcessing && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
                     <div className="bg-black p-8 rounded-lg shadow-xl flex flex-col items-center gap-4">
                         <Loader2 className="h-8 w-8 animate-spin text-[#cc2026]" />
                         <p className="text-white text-lg font-medium">
-                            Generating and uploading PDFs...
+                            Generating report...
                         </p>
                     </div>
                 </div>
             )}
-        </div>
+        </DefaultPageTemplate>
     );
-}
+} 

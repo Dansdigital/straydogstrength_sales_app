@@ -22,7 +22,7 @@ export const handler = async () => {
 
         const rawProducts = await response.json();
 
-        return rawProducts;
+        return rawProducts.products;
     } catch (error) {
         console.error('Error fetching Shopify products:', error);
         throw error;
