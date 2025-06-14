@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { generateClient } from "aws-amplify/data";
 import { type Schema } from "amplify/data/resource.ts";
 import {
@@ -39,11 +39,59 @@ type ShopifyProduct = {
 
 export function SyncProducts() {
     const [products, setProducts] = useState<ShopifyProduct[]>([]);
+    const [allProducts, setAllProducts] = useState<ShopifyProduct[]>([]);
     const [loading, setLoading] = useState(false);
     const [syncing, setSyncing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
+    const [syncedProductIds, setSyncedProductIds] = useState<number[]>([]);
     const client = generateClient<Schema>();
+
+    const fetchShopifyProducts = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            const response = await client.queries.GetAllProducts();
+
+            if (!response.data) {
+                throw new Error('No data received from the sync function');
+            }
+            const productsArray = JSON.parse(response.data as string);
+            setAllProducts(productsArray);
+        } catch (error) {
+            console.error('Error fetching Shopify products:', error);
+            setError(error instanceof Error ? error.message : 'Unknown error occurred');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        const initializeData = async () => {
+            // Get synced products
+            const syncedProducts = await client.models.ProductSyncStatus.list({ limit: 1000 });
+            setSyncedProductIds(syncedProducts.data.map(product => parseInt(product.product_id)));
+
+            // Get all products
+            let output = [];
+            await fetchShopifyProducts();
+            for (const product of allProducts) {
+                if (!syncedProductIds.includes(product.id)) {
+                    output.push(product);
+                }
+            }
+            console.log('Unsynced products:', output);
+        };
+
+        initializeData();
+    }, []);
+
+    // Update products list whenever allProducts or syncedProductIds change
+    useEffect(() => {
+        const unsyncedProducts = allProducts.filter(product => !syncedProductIds.includes(product.id));
+        setProducts(unsyncedProducts);
+    }, [allProducts, syncedProductIds]);
 
     // Filter products based on search query
     const filteredProducts = useMemo(() => {
@@ -58,26 +106,6 @@ export function SyncProducts() {
         );
     }, [products, searchQuery]);
 
-    const fetchShopifyProducts = async () => {
-        try {
-            setLoading(true);
-            setError(null);
-
-            const response = await client.queries.GetAllProducts();
-
-            if (!response.data) {
-                throw new Error('No data received from the sync function');
-            }
-            const productsArray = JSON.parse(response.data as string);
-            // console.log('Products array:', productsArray);
-            setProducts(productsArray);
-        } catch (error) {
-            console.error('Error fetching Shopify products:', error);
-            setError(error instanceof Error ? error.message : 'Unknown error occurred');
-        } finally {
-            setLoading(false);
-        }
-    };
     const handleSyncAllProducts = async () => {
         setSyncing(true);
         for (const product of products) {
@@ -93,6 +121,7 @@ export function SyncProducts() {
         }
         setSyncing(false);
     }
+
     const handleSyncProduct = async (product: ShopifyProduct) => {
         setSyncing(true);
         console.log('Syncing product:', product);

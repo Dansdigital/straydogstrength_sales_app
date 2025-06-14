@@ -107,7 +107,7 @@ export default function LoginForm() {
       <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg-primary)]">
         <div className="bg-[var(--color-bg-primary)] p-8 shadow-xl w-full border border-gray-300 max-w-md">
           <div className="flex items-center justify-center mb-6">
-            <img src="public/SD_red_header_LOGO.png" alt="straydog" className="w-[300px] object-cover" />
+            <img src="/SD_red_header_LOGO.png" alt="straydog" className="w-[300px] object-cover" />
           </div>
 
           {errorMessage && (
@@ -169,9 +169,7 @@ export default function LoginForm() {
     <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg-primary)]">
       <div className="bg-[var(--color-bg-primary)] p-8 border border-gray-300 shadow-xl w-full max-w-md">
         <div className="flex items-center justify-center mb-6">
-          <div className="flex items-center justify-center mb-6">
-            <img src="public/SD_red_header_LOGO.png" alt="straydog" className="w-[300px] object-cover" />
-          </div>
+          <img src="/SD_red_header_LOGO.png" alt="straydog" className="w-[300px] object-cover" />
         </div>
         {/* <h1 className="text-2xl font-bold mb-6 text-white text-center">Welcome Back</h1> */}
         <form onSubmit={handleSubmit} className="space-y-4">
