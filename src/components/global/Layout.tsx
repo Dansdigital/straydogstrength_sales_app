@@ -1,7 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { signOut } from "aws-amplify/auth";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import { CheckTheme } from "../Theme/ThemeChanger";
 import { fetchCurrentUser } from "../../utils/fetchCurrentUser";
 
 type User = {
@@ -14,8 +13,6 @@ type User = {
 };
 
 export default function Layout() {
-  CheckTheme();
-
   const location = useLocation();
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
@@ -97,7 +94,7 @@ export default function Layout() {
                 <NavLink to="/products" label="Products" />
                 <NavLink to="/sync-products" label="Sync Products" />
                 <NavLink to="/reports" label="Reports" />
-                {user?.groups.includes('Admin') && (
+                {user?.groups.includes("Admin") && (
                   <NavLink to="/user-management" label="User Management" />
                 )}
                 <NavLink to="/test" label="Test" />
@@ -135,7 +132,7 @@ export default function Layout() {
         className={`
           relative cursor-pointer text-[var(--color-text-primary)] 
           hover:text-[var(--color-primary)] transition-colors duration-200
-          ${isActive ? 'text-[var(--color-primary)]' : ''}
+          ${isActive ? "text-[var(--color-primary)]" : ""}
         `}
         onClick={() => navigate(to)}
       >
